@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  triton:
+    image: nvcr.io/nvidia/tritonserver:23.10-py3
+    container_name: triton_server
+    runtime: nvidia
+    ports:
+      - "8000:8000"  # HTTP
+      - "8001:8001"  # GRPC
+      - "8002:8002"  # Metrics
+    volumes:
+      - ./models:/models
+      - /root/.cache/huggingface:/root/.cache/huggingface
+      # Mount shared memory for performance if needed
+      - /dev/shm:/dev/shm
+    command: ["tritonserver", "--model-repository=/models", "--log-verbose=0"]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+    networks:
+      - ai_bridge
+
+  app:
+    build: .
+    container_name: realtime_app
+    ports:
+      - "8080:80"     # Web Dashboard (80 busy on host)
+      - "9092:9092" # AudioSocket
+    environment:
+      - TRITON_URL=triton:8001
+      - APP_PORT=80
+      - AUDIOSOCKET_PORT=9092
+      - CLASSIFIER_URL=http://classifier:8001/push_segment
+    depends_on:
+      - triton
+    volumes:
+      - ./app:/app
+      - /data/recordings:/recordings
+    # Restart policy
+    restart: unless-stopped
+    networks:
+      - ai_bridge
+
+networks:
+  ai_bridge:
+    external: true

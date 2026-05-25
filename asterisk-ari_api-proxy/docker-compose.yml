@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  api-proxy:
+    build: ./backend
+    container_name: asterisk-ari-api-proxy
+    network_mode: "host"
+    volumes:
+      - ${META_LOG_FILE:-/var/log/asterisk/audiosocket_meta.json}:${META_LOG_FILE:-/var/log/asterisk/audiosocket_meta.json}:ro
+      - ${AUDIO_DIR:-/data/dialogues}:${AUDIO_DIR:-/data/dialogues}:ro
+    restart: always
+    environment:
+      - ARI_URL=${ARI_URL:-http://127.0.0.1:8088/ari}
+      - ARI_USER=${ARI_USER:-whisper}
+      - ARI_PASS=${ARI_PASS:?ARI_PASS is required}
+      - META_LOG_FILE=${META_LOG_FILE:-/var/log/asterisk/audiosocket_meta.json}
+      - AUDIO_DIR=${AUDIO_DIR:-/data/dialogues}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  frontend:
+    build: ./frontend
+    container_name: asterisk-ari-frontend
+    ports:
+      - "8080:80"
+    restart: always

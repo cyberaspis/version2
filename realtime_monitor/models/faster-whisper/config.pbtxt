@@ -1,0 +1,29 @@
+name: "faster-whisper"
+backend: "python"
+max_batch_size: 32
+dynamic_batching {
+  preferred_batch_size: [ 8, 16, 24, 32 ]
+  max_queue_delay_microseconds: 200000
+}
+
+input [
+  {
+    name: "AUDIO"
+    data_type: TYPE_FP32
+    dims: [ -1 ]
+  }
+]
+output [
+  {
+    name: "TRANSCRIPT"
+    data_type: TYPE_STRING
+    dims: [ 1 ]
+  }
+]
+
+instance_group [
+  {
+    count: 3
+    kind: KIND_GPU
+  }
+]

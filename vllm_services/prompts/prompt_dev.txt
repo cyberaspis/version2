@@ -1,0 +1,9 @@
+Analyze the following call transcript segment (in Greek or English) and classify it.
+Provide a JSON response with 'category' and 'sentiment'.
+
+Instructions:
+1. 'category': [Sales, Support, Billing, Technical, Other]
+2. 'sentiment': [Positive, Neutral, Negative]
+
+Transcript:
+{text}

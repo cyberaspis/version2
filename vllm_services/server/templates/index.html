@@ -1,0 +1,2599 @@
+<!DOCTYPE html>
+<html lang="el">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CyberAspis Classifier</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0a1628;
+            --sidebar-bg: #0f1d33;
+            --surface-elevated: #152a45;
+            --text-primary: #f0f7ff;
+            --text-secondary: #8fafcc;
+            --accent-color: #3b82f6;
+            --accent-hover: #2563eb;
+            --accent-soft: rgba(59, 130, 246, 0.18);
+            --brand-blue: #38bdf8;
+            --brand-blue-deep: #0ea5e9;
+            --caller-bubble: #1a365d;
+            --agent-bubble: #1d4ed8;
+            --border-color: #1e3a5c;
+            --success: #22c55e;
+            --warning: #eab308;
+            --danger: #ef4444;
+            --btn-radius: 12px;
+            --btn-radius-pill: 999px;
+            --btn-shadow: 0 2px 12px rgba(37, 99, 235, 0.35);
+            --btn-shadow-hover: 0 4px 20px rgba(37, 99, 235, 0.45);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'DM Sans', system-ui, sans-serif;
+            background: radial-gradient(1200px 800px at 80% -10%, rgba(37, 99, 235, 0.12), transparent),
+                radial-gradient(900px 600px at -10% 100%, rgba(14, 165, 233, 0.08), transparent),
+                var(--bg-color);
+            color: var(--text-primary);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        aside {
+            width: 320px;
+            background-color: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: 1.35rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.14) 0%, transparent 55%);
+        }
+        .brand-title {
+            font-weight: 700;
+            font-size: 1.22rem;
+            letter-spacing: -0.03em;
+            line-height: 1.2;
+            background: linear-gradient(105deg, #7dd3fc 0%, #38bdf8 40%, #3b82f6 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 40px rgba(56, 189, 248, 0.35);
+        }
+
+        .sidebar-agent-model {
+            padding: 0 1.5rem 1rem;
+            font-size: 0.7rem;
+            line-height: 1.35;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .sidebar-agent-model strong {
+            color: var(--brand-blue);
+            font-weight: 600;
+        }
+
+        .sidebar-calls-header {
+            padding: 0.5rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .calls-title { font-weight: 700; color: var(--text-primary); }
+        .calls-count { margin-left: 0.25rem; }
+
+        .sidebar-filters {
+            display: flex;
+            gap: 0.35rem;
+            padding: 0.5rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+            flex-wrap: wrap;
+        }
+        .filter-btn {
+            padding: 0.45rem 0.85rem;
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border-color);
+            border-radius: var(--btn-radius-pill);
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+        }
+        .filter-btn:hover {
+            background: rgba(59, 130, 246, 0.12);
+            color: var(--text-primary);
+            border-color: rgba(59, 130, 246, 0.35);
+        }
+        .filter-btn.active {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            border-color: transparent;
+            box-shadow: var(--btn-shadow);
+        }
+
+        .call-breakdown {
+            padding: 0.45rem 1rem 0.65rem;
+            font-size: 0.62rem;
+            line-height: 1.5;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border-color);
+        }
+        .call-breakdown .bd-num {
+            color: var(--brand-blue);
+            font-weight: 700;
+        }
+
+        .call-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+        }
+
+        .call-list-empty {
+            padding: 1.5rem 1rem;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        .call-list-empty p { margin-bottom: 0.75rem; }
+        .call-list-empty-hint {
+            font-size: 0.75rem;
+            line-height: 1.4;
+        }
+        .call-list-empty code {
+            background: rgba(255,255,255,0.1);
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+        }
+
+        .no-call-placeholder {
+            margin: 2rem 1.5rem;
+            padding: 2rem;
+            background: rgba(30, 41, 59, 0.6);
+            border: 1px dashed var(--border-color);
+            border-radius: 0.75rem;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+        .no-call-placeholder.hidden { display: none; }
+        .no-call-placeholder p { margin-bottom: 0.75rem; }
+        .no-call-hint { font-size: 0.8rem; line-height: 1.5; }
+        .no-call-placeholder code {
+            background: rgba(255,255,255,0.1);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            display: block;
+            margin-top: 0.5rem;
+            overflow-x: auto;
+        }
+
+        .call-item {
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            background-color: var(--surface-elevated);
+            border-radius: var(--btn-radius);
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+            border: 2px solid transparent;
+        }
+
+        .call-item:hover {
+            background-color: #1a3352;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .call-item.active {
+            border-color: var(--accent-color);
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, var(--surface-elevated) 100%);
+            box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.25);
+        }
+
+        .call-meta {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-right: 0.25rem;
+        }
+
+        .badge-cat {
+            background: var(--accent-color);
+            color: white;
+        }
+
+        .badge-sent {
+            background: #64748b;
+            color: white;
+        }
+
+        .run-baseline-btn {
+            padding: 0.55rem 1.15rem;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #fff;
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            border: none;
+            border-radius: var(--btn-radius-pill);
+            cursor: pointer;
+            box-shadow: var(--btn-shadow);
+            transition: transform 0.15s, box-shadow 0.2s, filter 0.2s;
+        }
+        .run-baseline-btn:hover:not(:disabled) {
+            filter: brightness(1.08);
+            box-shadow: var(--btn-shadow-hover);
+            transform: translateY(-1px);
+        }
+        .run-baseline-btn:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .explain-stored-wrap {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        .explain-stored-h {
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: #5eead4;
+            margin-bottom: 0.4rem;
+            line-height: 1.35;
+        }
+        .explain-stored-h .explain-stream-pill {
+            display: inline-block;
+            margin-left: 0.45rem;
+            padding: 0.12rem 0.45rem;
+            font-size: 0.68rem;
+            font-weight: 800;
+            color: #0f172a;
+            background: linear-gradient(90deg, #5eead4, #a78bfa);
+            border-radius: 999px;
+            vertical-align: middle;
+            animation: explain-pulse 1.2s ease-in-out infinite;
+        }
+        @keyframes explain-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.72; }
+        }
+        .explain-stored-scroll {
+            max-height: min(58vh, 720px);
+            min-height: 12rem;
+            overflow-y: auto;
+            overflow-x: hidden;
+            overscroll-behavior: contain;
+            padding: 0.65rem 0.75rem;
+            border: 1px solid rgba(94, 234, 212, 0.28);
+            border-radius: 10px;
+            background: rgba(0,0,0,0.28);
+        }
+        .explain-stored-scroll::-webkit-scrollbar {
+            width: 11px;
+        }
+        .explain-stored-scroll::-webkit-scrollbar-thumb {
+            background: rgba(94, 234, 212, 0.4);
+            border-radius: 6px;
+        }
+        .explain-step-stored {
+            margin-bottom: 1rem;
+            padding-bottom: 0.85rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .explain-step-stored:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+        .explain-step-h {
+            font-size: 0.92rem;
+            font-weight: 750;
+            color: #c4b5fd;
+            margin-bottom: 0.35rem;
+            line-height: 1.35;
+        }
+        .explain-step-meta {
+            font-size: 0.78rem;
+            color: #94a3b8;
+            margin-bottom: 0.35rem;
+        }
+        .explain-llm-question-label {
+            font-size: 0.82rem;
+            font-weight: 750;
+            color: #7dd3fc;
+            margin: 0.5rem 0 0.2rem;
+            letter-spacing: 0.02em;
+        }
+        .explain-llm-response-label {
+            font-size: 0.82rem;
+            font-weight: 750;
+            color: #86efac;
+            margin: 0.35rem 0 0.2rem;
+            letter-spacing: 0.02em;
+        }
+        .explain-step-pre {
+            margin: 0;
+            font-family: ui-monospace, "Cascadia Code", "Segoe UI Mono", monospace;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            color: #e2e8f0;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .header-status-stack {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: nowrap;
+            align-items: center;
+            gap: 0.45rem;
+            flex-shrink: 0;
+        }
+        .badge-vllm-up {
+            background: #15803d !important;
+            font-size: 0.72rem;
+            max-width: 280px;
+            text-align: right;
+            line-height: 1.25;
+        }
+        .badge-vllm-down {
+            background: #7f1d1d !important;
+            font-size: 0.72rem;
+            max-width: 280px;
+            text-align: right;
+            line-height: 1.25;
+        }
+        #vllmHeaderStatus {
+            white-space: nowrap;
+            max-width: none;
+            text-align: center;
+            border-radius: var(--btn-radius-pill);
+            padding: 0.5rem 1rem;
+            text-transform: none;
+            font-weight: 700;
+            font-size: 0.78rem;
+            margin-right: 0;
+        }
+        .action-btn {
+            padding: 0.5rem 1rem;
+            font-size: 0.78rem;
+            font-weight: 600;
+            border: none;
+            border-radius: var(--btn-radius-pill);
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.2s, filter 0.2s;
+        }
+        .action-btn:hover:not(:disabled) {
+            filter: brightness(1.06);
+            transform: translateY(-1px);
+        }
+        .action-btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+        .action-btn-import {
+            color: #042f4a;
+            background: linear-gradient(135deg, #7dd3fc 0%, #38bdf8 100%);
+            box-shadow: 0 2px 10px rgba(56, 189, 248, 0.35);
+        }
+        .action-btn-delete {
+            color: white;
+            background: linear-gradient(135deg, #f87171 0%, #dc2626 100%);
+            box-shadow: 0 2px 10px rgba(239, 68, 68, 0.3);
+        }
+        .action-btn-save {
+            color: #042f2e;
+            background: linear-gradient(135deg, #5eead4 0%, #14b8a6 100%);
+            box-shadow: 0 2px 10px rgba(20, 184, 166, 0.35);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            background: rgba(2, 12, 27, 0.72);
+            backdrop-filter: blur(6px);
+        }
+        .modal-overlay.is-open {
+            display: flex;
+        }
+        #customExplainModal .modal-dialog {
+            max-width: min(560px, 96vw);
+        }
+        .custom-explain-mode-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 0.85rem;
+            font-size: 0.8rem;
+            color: var(--text-primary);
+        }
+        .custom-explain-mode-row label {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            cursor: pointer;
+        }
+        .custom-explain-subs-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            max-height: min(48vh, 420px);
+            overflow-y: auto;
+            margin-bottom: 1rem;
+            padding-right: 0.25rem;
+        }
+        .custom-explain-sub-field label {
+            display: block;
+            font-size: 0.68rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 0.2rem;
+        }
+
+        .modal-dialog {
+            width: 100%;
+            max-width: 420px;
+            background: linear-gradient(165deg, var(--surface-elevated) 0%, #0f1a2e 100%);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.35rem 1.5rem 1.25rem;
+            box-shadow: 0 24px 48px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(56, 189, 248, 0.12) inset;
+        }
+        .modal-dialog h3 {
+            font-size: 1.05rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin-bottom: 0.35rem;
+            color: var(--text-primary);
+        }
+        .modal-hint {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            line-height: 1.45;
+            margin-bottom: 1rem;
+        }
+        .import-presets {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+            margin-bottom: 1rem;
+        }
+        .modal-preset {
+            font-size: 0.68rem;
+            font-weight: 600;
+            padding: 0.35rem 0.65rem;
+            border-radius: var(--btn-radius-pill);
+            border: 1px solid var(--border-color);
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s, border-color 0.2s;
+        }
+        .modal-preset:hover {
+            background: rgba(59, 130, 246, 0.15);
+            color: var(--text-primary);
+            border-color: rgba(59, 130, 246, 0.35);
+        }
+        .import-cat-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.55rem;
+            margin-bottom: 1rem;
+        }
+        .import-cat-list label {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            font-size: 0.82rem;
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+        .import-cat-list input[type="checkbox"] {
+            width: 1rem;
+            height: 1rem;
+            accent-color: var(--accent-color);
+            cursor: pointer;
+        }
+        .import-limit-row {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            margin-bottom: 1.15rem;
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+        }
+        .import-limit-row input[type="number"] {
+            width: 5rem;
+            padding: 0.4rem 0.55rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: rgba(0, 0, 0, 0.25);
+            color: var(--text-primary);
+            font-size: 0.85rem;
+        }
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+        }
+        .modal-actions button {
+            padding: 0.45rem 1rem;
+            font-size: 0.78rem;
+            font-weight: 600;
+            border-radius: var(--btn-radius-pill);
+            cursor: pointer;
+            border: none;
+            transition: filter 0.2s, transform 0.15s;
+        }
+        .modal-actions button:hover:not(:disabled) {
+            filter: brightness(1.08);
+        }
+        .modal-btn-cancel {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color) !important;
+        }
+        .modal-btn-ok {
+            background: linear-gradient(135deg, #7dd3fc 0%, #38bdf8 100%);
+            color: #042f4a;
+            box-shadow: 0 2px 10px rgba(56, 189, 248, 0.35);
+        }
+        .modal-btn-danger {
+            background: linear-gradient(135deg, #f87171 0%, #dc2626 100%);
+            color: #fff;
+            box-shadow: 0 2px 10px rgba(239, 68, 68, 0.35);
+        }
+
+        .classifier-progress-wrap {
+            flex-shrink: 0;
+            padding: 0.5rem 1.5rem;
+            background: rgba(0,0,0,0.2);
+            border-bottom: 1px solid var(--border-color);
+        }
+        .classifier-progress-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.35rem;
+        }
+        .classifier-progress-track {
+            height: 10px;
+            background: rgba(255,255,255,0.08);
+            border-radius: var(--btn-radius-pill);
+            overflow: hidden;
+        }
+        .classifier-progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #2563eb, #38bdf8);
+            transition: width 0.2s ease;
+        }
+
+        .classifier-metrics-wrap {
+            flex-shrink: 0;
+            padding: 0.65rem 1.5rem 0.85rem;
+            background: rgba(59, 130, 246, 0.1);
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.78rem;
+            line-height: 1.45;
+            color: var(--text-secondary);
+        }
+        .classifier-metrics-wrap strong {
+            color: var(--brand-blue);
+        }
+        .classifier-metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 0.35rem 1rem;
+            margin-top: 0.35rem;
+        }
+
+        main {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Scroll classification card + transcript together (header & progress stay fixed). */
+        .main-scroll {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+            overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch;
+        }
+        .main-scroll::-webkit-scrollbar {
+            width: 12px;
+        }
+        .main-scroll::-webkit-scrollbar-thumb {
+            background: rgba(56, 189, 248, 0.35);
+            border-radius: 8px;
+            border: 3px solid transparent;
+            background-clip: padding-box;
+        }
+
+        .header {
+            flex-shrink: 0;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            background: linear-gradient(180deg, rgba(59, 130, 246, 0.06) 0%, transparent 100%);
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: nowrap;
+            min-width: 0;
+        }
+        .header-actions-col {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            flex: 1;
+            min-width: 0;
+            max-width: 100%;
+        }
+        .header-actions-row {
+            display: flex;
+            flex-wrap: nowrap;
+            align-items: center;
+            gap: 0.55rem;
+            justify-content: flex-end;
+            min-width: 0;
+            width: 100%;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding-bottom: 0.2rem;
+            -webkit-overflow-scrolling: touch;
+        }
+        .header-actions-row .action-btn,
+        .header-actions-row .run-baseline-btn,
+        .header-actions-row .run-custom-explain-btn,
+        .header-actions-row .run-gold-eval-btn {
+            flex-shrink: 0;
+        }
+        .custom-prompt-textarea {
+            flex: 1;
+            min-width: 220px;
+            min-height: 2.75rem;
+            max-height: 7rem;
+            padding: 0.45rem 0.65rem;
+            font-size: 0.78rem;
+            font-family: inherit;
+            line-height: 1.45;
+            color: var(--text-primary);
+            background: rgba(15, 29, 51, 0.9);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            resize: vertical;
+        }
+        .custom-prompt-textarea::placeholder {
+            color: rgba(143, 175, 204, 0.65);
+        }
+        .run-custom-explain-btn {
+            padding: 0.55rem 0.95rem;
+            font-size: 0.76rem;
+            font-weight: 700;
+            color: #fff;
+            background: linear-gradient(135deg, #d97706 0%, #c2410c 100%);
+            border: none;
+            border-radius: var(--btn-radius-pill);
+            cursor: pointer;
+            box-shadow: var(--btn-shadow);
+            transition: transform 0.15s, box-shadow 0.2s, filter 0.2s;
+            align-self: center;
+            white-space: nowrap;
+        }
+        .run-custom-explain-btn:hover:not(:disabled) {
+            filter: brightness(1.08);
+            box-shadow: var(--btn-shadow-hover);
+            transform: translateY(-1px);
+        }
+        .run-custom-explain-btn:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        .run-gold-eval-btn {
+            padding: 0.55rem 0.95rem;
+            font-size: 0.76rem;
+            font-weight: 700;
+            color: #fff;
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            border: none;
+            border-radius: var(--btn-radius-pill);
+            cursor: pointer;
+            box-shadow: var(--btn-shadow);
+            transition: transform 0.15s, box-shadow 0.2s, filter 0.2s;
+            align-self: center;
+            white-space: nowrap;
+        }
+        .run-gold-eval-btn:hover:not(:disabled) {
+            filter: brightness(1.08);
+            box-shadow: var(--btn-shadow-hover);
+            transform: translateY(-1px);
+        }
+        .run-gold-eval-btn:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        .header h2 {
+            color: var(--text-primary);
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .classification-card {
+            margin: 1.5rem 1.5rem 1rem;
+            padding: 1.5rem;
+            background: linear-gradient(145deg, rgba(30, 64, 175, 0.35) 0%, rgba(10, 22, 40, 0.95) 45%, var(--bg-color) 100%);
+            border: 1px solid rgba(59, 130, 246, 0.45);
+            border-radius: 16px;
+            box-shadow: 0 12px 40px -8px rgba(37, 99, 235, 0.25), 0 0 0 1px rgba(255,255,255,0.04) inset;
+        }
+
+        .card-row {
+            display: flex;
+            gap: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .value {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-top: 0.25rem;
+        }
+
+        #resMeaning {
+            white-space: pre-wrap;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+            max-width: 100%;
+            line-height: 1.55;
+        }
+
+        .chat-container {
+            flex: none;
+            padding: 0 1.5rem 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            min-height: 12rem;
+        }
+
+        .msg {
+            max-width: 80%;
+            padding: 0.75rem 1rem;
+            border-radius: 1rem;
+            position: relative;
+            line-height: 1.5;
+        }
+
+        .msg.caller {
+            align-self: flex-start;
+            background: var(--caller-bubble);
+            border-bottom-left-radius: 0.2rem;
+        }
+
+        .msg.agent {
+            align-self: flex-end;
+            background: var(--agent-bubble);
+            border-bottom-right-radius: 0.2rem;
+        }
+
+        .msg-meta {
+            font-size: 0.65rem;
+            color: #93c5fd;
+            margin-top: 0.25rem;
+            display: block;
+        }
+
+        .sentiment-Positive {
+            color: #4ade80;
+        }
+
+        .sentiment-Neutral {
+            color: #fbbf24;
+        }
+
+        .sentiment-Negative {
+            color: #f87171;
+        }
+
+        .pulse {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: var(--warning);
+            border-radius: 50%;
+            margin-right: 6px;
+            animation: pulse-animation 1.5s infinite;
+        }
+
+        @keyframes pulse-animation {
+            0% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(255, 166, 0, 0.7);
+            }
+
+            70% {
+                transform: scale(1);
+                box-shadow: 0 0 0 6px rgba(255, 166, 0, 0);
+            }
+
+            100% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(255, 166, 0, 0);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <aside>
+        <div class="sidebar-header"><span class="brand-title">CyberAspis Classifier</span></div>
+        <div class="sidebar-agent-model" id="sidebarAgentModel" title="Τοπικός πράκτορας συμπεράσματος">
+            <strong>Πράκτορας:</strong> <span id="sidebarAgentModelText">Φόρτωση…</span>
+        </div>
+        <div class="sidebar-calls-header">
+            <span class="calls-title">Κλήσεις</span>
+            <span class="calls-count" id="callsCount">(0)</span>
+        </div>
+        <div class="sidebar-filters">
+            <button type="button" class="filter-btn active" data-filter="all" id="filterAll" title="Όλες οι κλήσεις">Όλες</button>
+            <button type="button" class="filter-btn" data-filter="vishing" id="filterVishing" title="Ετικέτα/στάθμη vishing">Vishing</button>
+            <button type="button" class="filter-btn" data-filter="critical" id="filterCritical" title="Κατάσταση CRITICAL">Κρίσιμο</button>
+            <button type="button" class="filter-btn" data-filter="safe" id="filterSafe" title="Μόνο SAFE (όχι CRITICAL)">Ασφαλές</button>
+            <button type="button" class="filter-btn" data-filter="pending" id="filterPending" title="Χωρίς αποτέλεσμα ακόμη ή ο classifier τρέχει">Εκκρεμεί</button>
+            <button type="button" class="filter-btn" data-filter="error" id="filterError" title="Αποτυχία ταξινόμησης (vLLM, κενό κείμενο κ.λπ.)">Σφάλμα</button>
+        </div>
+        <div class="call-breakdown" id="callBreakdown" aria-live="polite"></div>
+        <div class="call-list" id="callList">
+            <div id="callListEmpty" class="call-list-empty">
+                <p>Δεν υπάρχουν κλήσεις ακόμη.</p>
+                <p class="call-list-empty-hint">Στείλτε τμήματα κειμένου στο <code>/push_segment</code> ή εισάγετε συνομιλίες με το κουμπί «Εισαγωγή κλήσεων».</p>
+            </div>
+        </div>
+    </aside>
+    <main>
+        <div class="header">
+            <div class="header-actions-col">
+                <div class="header-actions-row">
+                    <button type="button" id="importCallsBtn" class="action-btn action-btn-import" title="Εισαγωγή συνομιλιών από το dataset">Εισαγωγή κλήσεων</button>
+                    <button type="button" id="deleteCallsBtn" class="action-btn action-btn-delete" title="Διαγραφή όλων των κλήσεων από το dashboard">Διαγραφή κλήσεων</button>
+                    <button type="button" id="saveResultsBtn" class="action-btn action-btn-save" title="Αποθήκευση JSON + λήψη XLSX στο classifier_run_logs/">Αποθήκευση &amp; Λήψη</button>
+                    <button type="button" id="runBaselineBtn" class="run-baseline-btn"
+                        title="Εκτέλεση Mistral-7B σε κάθε εισαγμένη κλήση (vLLM, πύλη 8010). Αν η λίστα είναι κενή, εισάγετε κλήσεις πρώτα.">
+                        Έναρξη Classifier (0 κλήσεις)
+                    </button>
+                    <button type="button" id="runBaselineCustomExplainBtn" class="run-custom-explain-btn"
+                        title="Προσαρμοσμένο prompt — απαντήσεις Mistral (vLLM) ανά κλήση.">
+                        Προσαρμοσμένο Prompt (0 κλήσεις)
+                    </button>
+                    <button type="button" id="runGoldEvalExplainBtn" class="run-gold-eval-btn" title="">
+                        Ground Truth (0 κλήσεις)
+                    </button>
+                    <div class="header-status-stack" id="headerStatusStack">
+                        <div id="vllmHeaderStatus" class="badge badge-vllm-down" title="GET /health → vLLM">vLLM: Not Working</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="classifierProgressBar" class="classifier-progress-wrap" style="display: none;">
+            <div class="classifier-progress-label">Ολοκληρωμένες κλήσεις <span id="progressDone">0</span> / <span id="progressTotal">0</span> <span id="progressDetail" style="color:#94a3b8;font-weight:500;"></span></div>
+            <div class="classifier-progress-track"><div class="classifier-progress-fill" id="progressFill"></div></div>
+        </div>
+        <div id="lastRunMetrics" class="classifier-metrics-wrap" style="display: none;" aria-live="polite"></div>
+
+        <div class="main-scroll">
+        <div id="noCallPlaceholder" class="no-call-placeholder">
+        </div>
+
+        <div id="classificationArea" style="display: none;">
+            <div class="classification-card">
+                <div class="card-row">
+                    <div style="flex: 1;">
+                        <div class="label">Πράκτορας classifier</div>
+                        <div class="value" id="cardAgentModel" style="font-size: 0.85rem; color: var(--text-secondary);">—</div>
+                    </div>
+                </div>
+                <div class="card-row">
+                    <div>
+                        <div class="label">Συναίσθημα</div>
+                        <div class="value" id="resSentiment">-</div>
+                    </div>
+                    <div>
+                        <div class="label">Τομέας</div>
+                        <div class="value" id="resDomain">-</div>
+                    </div>
+                </div>
+
+                <div class="card-row"
+                    style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1)">
+                    <div style="flex: 1">
+                        <div class="label" style="color: var(--accent-color); font-weight: 700; margin-bottom: 0.5rem">
+                            Vishing (Mistral-7B · τοπικό vLLM)</div>
+                        <div style="display: flex; gap: 2rem; align-items: center;">
+                            <div>
+                                <div class="label">Βαθμός</div>
+                                <div class="value" id="resVishing" style="font-size: 1.5rem">0%</div>
+                            </div>
+                            <div>
+                                <div class="label">Κατάσταση</div>
+                                <div class="value" id="resRiskStatus" style="font-size: 1.2rem; font-weight: 800;">SAFE</div>
+                            </div>
+                            <div>
+                                <div class="label">Ενέργεια</div>
+                                <div class="value" id="resTriggeredAction" style="display:none; font-size:0.85rem; color:#fb923c;">—</div>
+                            </div>
+                        </div>
+                        <div id="resLabelRow" style="margin-top: 0.65rem; font-size: 0.8rem; color: var(--text-secondary);">
+                            <span class="label" style="font-size:0.65rem;">Εισαγωγή</span>
+                            <span id="resImportGt" class="value" style="margin-right:1rem;">—</span>
+                            <span class="label" style="font-size:0.65rem;">Classifier</span>
+                            <span id="resClassifierLabel" class="value">—</span>
+                        </div>
+                        <div id="resMeaningWrap" style="margin-top: 0.75rem; display: none;">
+                            <div class="label" style="font-size: 0.7rem;">Ερμηνεία</div>
+                            <div id="resMeaning" class="value" style="font-size: 0.85rem; color: var(--text-secondary);">-</div>
+                        </div>
+                        <div id="resErrorWrap" class="label" style="margin-top: 0.75rem; color: #f87171; font-size: 0.8rem; display: none;"></div>
+                        <div id="explainabilityStoredWrap" class="explain-stored-wrap" style="display: none;">
+                            <div class="explain-stored-h" id="explainabilityCallTitle"></div>
+                            <div id="explainabilityStoredBody" class="explain-stored-scroll" aria-live="polite"></div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            <!-- Debug Raw State -->
+            <div id="debugRaw"
+                style="font-family: monospace; font-size: 0.65rem; color: #4ade80; margin-top: 1rem; padding: 0.5rem; background: rgba(0,0,0,0.3); border-radius: 4px; display: none;">
+            </div>
+        </div>
+        <div class="chat-container" id="chatContainer"></div>
+        </div>
+    </main>
+
+    <div id="importModal" class="modal-overlay" aria-hidden="true" role="presentation">
+        <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="importModalTitle" tabindex="-1">
+            <h3 id="importModalTitle">Εισαγωγή συνομιλιών</h3>
+            <p class="modal-hint">Επιλέξτε από ποιες κατηγορίες θέλετε εισαγωγή και πόσες συνομιλίες (έως 500). Μπορείτε να συνδυάσετε πολλές κατηγορίες.</p>
+            <div class="import-presets">
+                <button type="button" class="modal-preset" data-import-preset="both" title="Vishing και μη vishing (όπως πριν)">Και τα δύο (vishing + μη vishing)</button>
+                <button type="button" class="modal-preset" data-import-preset="all" title="Όλες οι διαθέσιμες πηγές">Όλες οι κατηγορίες</button>
+                <button type="button" class="modal-preset" data-import-preset="vishing">Μόνο vishing</button>
+                <button type="button" class="modal-preset" data-import-preset="non_vishing">Μόνο μη vishing</button>
+                <button type="button" class="modal-preset" data-import-preset="neutral">Μόνο ουδέτερες</button>
+            </div>
+            <div class="import-cat-list">
+                <label><input type="checkbox" id="importCatVishing" checked> Vishing</label>
+                <label><input type="checkbox" id="importCatNonVishing" checked> Μη vishing</label>
+                <label><input type="checkbox" id="importCatNeutral"> Ουδέτερες (χωρίς ετικέτα ground truth)</label>
+            </div>
+            <div class="import-limit-row">
+                <label for="importLimitInput">Πλήθος συνομιλιών</label>
+                <input type="number" id="importLimitInput" min="1" max="500" value="20">
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="modal-btn-cancel" id="importModalCancel">Ακύρωση</button>
+                <button type="button" class="modal-btn-ok" id="importModalOk">Εισαγωγή</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="deleteModal" class="modal-overlay" aria-hidden="true" role="presentation">
+        <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle" tabindex="-1">
+            <h3 id="deleteModalTitle">Διαγραφή όλων των κλήσεων</h3>
+            <p class="modal-hint">Αυτή η ενέργεια δεν αναιρείται. Όλες οι συνομιλίες και τα αποτελέσματα του classifier στη μνήμη του dashboard θα διαγραφούν.</p>
+            <div class="modal-actions">
+                <button type="button" class="modal-btn-cancel" id="deleteModalCancel">Ακύρωση</button>
+                <button type="button" class="modal-btn-danger" id="deleteModalOk">Διαγραφή</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="saveModal" class="modal-overlay" aria-hidden="true" role="presentation">
+        <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="saveModalTitle" tabindex="-1">
+            <h3 id="saveModalTitle">Αποθήκευση &amp; Λήψη</h3>
+            <p class="modal-hint">Θα αποθηκευτούν <strong>JSON</strong> και <strong>XLSX</strong> (κλήση, μεταγραφή, classifier αν υπάρχει, explainability για όλες τις ροές: προκαθορισμένο prompt, custom, υπο-prompts, ή βήματα baseline) στον φάκελο <code style="font-size:0.72rem;background:rgba(0,0,0,.25);padding:0.12rem 0.35rem;border-radius:4px">classifier_run_logs/</code> — το XLSX θα γίνει αυτόματα λήψη στον browser.</p>
+            <p id="saveModalExportHint" class="modal-hint" style="display: none; margin-top: 0.65rem; padding: 0.55rem 0.65rem; background: rgba(5, 150, 105, 0.15); border-radius: 8px; border: 1px solid rgba(5, 150, 105, 0.35);"></p>
+            <div class="modal-actions">
+                <button type="button" class="modal-btn-cancel" id="saveModalCancel">Ακύρωση</button>
+                <button type="button" class="modal-btn-ok" id="saveModalOk">Αποθήκευση</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="customExplainModal" class="modal-overlay" aria-hidden="true" role="presentation">
+        <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="customExplainModalTitle" tabindex="-1">
+            <h3 id="customExplainModalTitle">Προσαρμοσμένο prompt (Explainability)</h3>
+            <p class="modal-hint">Εισάγετε το custom prompt για να δείτε τις απαντήσεις του LLM</p>
+            <div class="custom-explain-mode-row">
+                <label><input type="radio" name="customExplainMode" id="customExplainModeFull" value="full" checked> Ένα prompt ανά κλήση</label>
+                <label><input type="radio" name="customExplainMode" id="customExplainModeSubs" value="subs"> Πολλαπλά υπο-prompts (σειρά βημάτων)</label>
+            </div>
+            <div id="customExplainFullPanel">
+                <textarea id="customExplainFullTextarea" class="custom-prompt-textarea" rows="5"
+                    placeholder="Οδηγίες για το Mistral· η συνομιλία προστίθεται αυτόματα."></textarea>
+            </div>
+            <div id="customExplainSubsPanel" style="display:none;">
+                <div class="import-limit-row" style="margin-bottom:0.75rem;">
+                    <label for="customExplainSubCount">Πλήθος υπο-prompts (1–12)</label>
+                    <input type="number" id="customExplainSubCount" min="1" max="12" value="3" style="width:5rem;">
+                </div>
+                <div id="customExplainSubsDynamic" class="custom-explain-subs-grid"></div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="modal-btn-cancel" id="customExplainModalCancel">Ακύρωση</button>
+                <button type="button" class="modal-btn-ok" id="customExplainModalRun">Έναρξη</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const wsProto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${wsProto}//${window.location.host}/ws`;
+        let socket;
+        let calls = {};
+        /** After Ground Truth run, save uses gold_eval XLSX/JSON until another run resets this. */
+        let pendingSaveExportVariant = 'default';
+        let activeUid = null;
+        /** UUID of the call currently receiving explainability SSE steps (per-call live panel). */
+        let explainabilityStreamingCallUuid = null;
+        /** Progress label style for shared explainability POST stream (custom full / subs / default modal). */
+        let currentExplainStreamKind = 'full_llm';
+        let lastServerTime = Date.now() / 1000; // Track server time for sync
+        let callFilter = 'all'; // 'all' | 'vishing' | 'critical' | 'safe' | 'pending' | 'error'
+
+        function greekCallsCount(n) {
+            n = Number(n) || 0;
+            if (n === 1) return '1 κλήση';
+            return n + ' κλήσεις';
+        }
+        function baselineIdleLabel(n) {
+            return 'Έναρξη Classifier (' + greekCallsCount(n) + ')';
+        }
+        function customExplainIdleLabel(n) {
+            return 'Προσαρμοσμένο Prompt (' + greekCallsCount(n) + ')';
+        }
+        function goldEvalIdleLabel(n) {
+            return 'Ground Truth (' + greekCallsCount(n) + ')';
+        }
+
+        var CUSTOM_EXPLAIN_MAX_SUBS = 12;
+
+        function renderCustomSubFields(preserve) {
+            const host = document.getElementById('customExplainSubsDynamic');
+            const countEl = document.getElementById('customExplainSubCount');
+            if (!host || !countEl) return;
+            var n = parseInt(countEl.value, 10);
+            if (isNaN(n) || n < 1) n = 3;
+            if (n > CUSTOM_EXPLAIN_MAX_SUBS) n = CUSTOM_EXPLAIN_MAX_SUBS;
+            countEl.value = n;
+            var oldVals = [];
+            if (preserve) {
+                for (var j = 0; j < CUSTOM_EXPLAIN_MAX_SUBS; j++) {
+                    var prevTa = document.getElementById('customDynSub' + j);
+                    oldVals[j] = prevTa ? (prevTa.value || '') : '';
+                }
+            }
+            host.innerHTML = '';
+            for (var i = 0; i < n; i++) {
+                var div = document.createElement('div');
+                div.className = 'custom-explain-sub-field';
+                var lab = document.createElement('label');
+                lab.setAttribute('for', 'customDynSub' + i);
+                lab.textContent = 'Υπο-prompt ' + (i + 1);
+                var ta = document.createElement('textarea');
+                ta.id = 'customDynSub' + i;
+                ta.className = 'custom-prompt-textarea';
+                ta.rows = 2;
+                ta.placeholder = 'Κείμενο εστίασης…';
+                if (preserve && oldVals[i]) ta.value = oldVals[i];
+                div.appendChild(lab);
+                div.appendChild(ta);
+                host.appendChild(div);
+            }
+        }
+
+        function syncCustomExplainModalPanels() {
+            const subs = document.getElementById('customExplainModeSubs');
+            const fullPanel = document.getElementById('customExplainFullPanel');
+            const subsPanel = document.getElementById('customExplainSubsPanel');
+            const isSubs = subs && subs.checked;
+            if (fullPanel) fullPanel.style.display = isSubs ? 'none' : 'block';
+            if (subsPanel) subsPanel.style.display = isSubs ? 'block' : 'none';
+            if (isSubs) renderCustomSubFields(true);
+        }
+
+        function appendExplainabilityStep(callUuid, stepRec) {
+            if (!callUuid || !stepRec) return;
+            if (!calls[callUuid]) {
+                calls[callUuid] = {
+                    uuid: callUuid,
+                    transcripts: [],
+                    classification: null,
+                    last_classification_time: 0,
+                    is_processing: false
+                };
+            }
+            if (!calls[callUuid].explainability) calls[callUuid].explainability = { steps: [] };
+            const steps = calls[callUuid].explainability.steps;
+            const rec = {
+                step_index: stepRec.step_index,
+                step_key: stepRec.step_key || '',
+                step_title: stepRec.step_title || '',
+                llm_question: stepRec.llm_question != null ? String(stepRec.llm_question) : '',
+                llm_raw: stepRec.llm_raw || ''
+            };
+            const idx = steps.findIndex(function (s) { return s.step_index === rec.step_index; });
+            if (idx >= 0) steps[idx] = rec;
+            else steps.push(rec);
+            if (rec.step_key === 'custom') {
+                calls[callUuid].explainability.mode = 'custom';
+            }
+            if (rec.step_key && String(rec.step_key).indexOf('custom_sub_') === 0) {
+                calls[callUuid].explainability.mode = 'custom_subprompts';
+            }
+        }
+
+        function isExplainabilityStreamingFor(buf) {
+            if (!buf || !buf.uuid) return false;
+            const cBtn = document.getElementById('runBaselineCustomExplainBtn');
+            const gBtn = document.getElementById('runGoldEvalExplainBtn');
+            const cu = cBtn && cBtn.dataset.customExplainRunning === '1';
+            const ge = gBtn && gBtn.dataset.goldEvalRunning === '1';
+            return !!((cu || ge) && explainabilityStreamingCallUuid === buf.uuid);
+        }
+
+        function resetClassificationCardIfNoClassification(buf) {
+            if (!buf || buf.classification) return;
+            const sentEl = document.getElementById('resSentiment');
+            if (sentEl) {
+                sentEl.textContent = '—';
+                sentEl.className = 'value sentiment-Neutral';
+            }
+            const domEl = document.getElementById('resDomain');
+            if (domEl) domEl.textContent = '—';
+            const vs = document.getElementById('resVishing');
+            if (vs) {
+                vs.textContent = '—';
+                vs.style.color = 'var(--text-secondary)';
+            }
+            const rs = document.getElementById('resRiskStatus');
+            if (rs) {
+                rs.textContent = '—';
+                rs.style.color = 'var(--text-secondary)';
+            }
+            const mw = document.getElementById('resMeaningWrap');
+            const me = document.getElementById('resMeaning');
+            if (mw) mw.style.display = 'none';
+            if (me) me.textContent = '—';
+            const ew = document.getElementById('resErrorWrap');
+            if (ew) {
+                ew.textContent = '';
+                ew.style.display = 'none';
+            }
+            const clsEl = document.getElementById('resClassifierLabel');
+            if (clsEl) {
+                clsEl.textContent = '—';
+                clsEl.style.color = 'var(--text-secondary)';
+            }
+        }
+
+        function openModalOverlay(overlay) {
+            if (!overlay) return;
+            overlay.classList.add('is-open');
+            overlay.setAttribute('aria-hidden', 'false');
+        }
+        function closeModalOverlay(overlay) {
+            if (!overlay) return;
+            overlay.classList.remove('is-open');
+            overlay.setAttribute('aria-hidden', 'true');
+        }
+
+        /**
+         * POST /run_baseline_explainability_stream — shared SSE loop (custom prompt, sub-prompts, ή default modal).
+         * @param {object} payload — { limit, custom_prompt?, custom_subprompts?, custom_prompt_preserve_output? }
+         * @param {HTMLButtonElement} primaryBtn — κουμπί που δείχνει πρόοδο
+         * @param {object} opts — { runningDatasetKey, idleLabelFn, progressPrefix, alertHttp, alertFail, initialStreamKind }
+         */
+        async function runExplainabilityPostPayload(payload, primaryBtn, opts) {
+            opts = opts || {};
+            const runningDatasetKey = opts.runningDatasetKey || 'customExplainRunning';
+            const idleLabelFn = opts.idleLabelFn || customExplainIdleLabel;
+            const progressPrefix = opts.progressPrefix || 'Explainability';
+            const alertHttp = opts.alertHttp || ('HTTP ' + 'σφάλμα');
+            const alertFail = opts.alertFail || 'Αποτυχία ροής';
+            const baselineBtnPeer = document.getElementById('runBaselineBtn');
+            const customBtnPeer = document.getElementById('runBaselineCustomExplainBtn');
+            const goldEvalBtnPeer = document.getElementById('runGoldEvalExplainBtn');
+            const progressWrap = document.getElementById('classifierProgressBar');
+            const progressDone = document.getElementById('progressDone');
+            const progressTotal = document.getElementById('progressTotal');
+            const progressFill = document.getElementById('progressFill');
+            const metricsEl = document.getElementById('lastRunMetrics');
+            const progressDetail = document.getElementById('progressDetail');
+
+            function showProgress(done, total) {
+                if (!progressWrap || !progressDone || !progressTotal || !progressFill) return;
+                progressWrap.style.display = 'block';
+                progressDone.textContent = done;
+                progressTotal.textContent = total;
+                progressFill.style.width = total ? (100 * done / total) + '%' : '0%';
+            }
+            function hideProgress() {
+                if (progressWrap) progressWrap.style.display = 'none';
+                if (progressDetail) progressDetail.textContent = '';
+            }
+            function setExplainStepProgress(callIndex, totalCalls, stepIndex, stepTotal) {
+                if (!progressFill || !totalCalls) return;
+                const st = Math.max(stepTotal || 1, 1);
+                const ss = Math.min((stepIndex || 0) + 1, st);
+                const frac = (callIndex - 1 + ss / st) / totalCalls;
+                progressFill.style.width = (100 * Math.min(Math.max(frac, 0), 1)) + '%';
+                const pre = currentExplainStreamKind === 'subs'
+                    ? 'Mistral · υπο-prompts · '
+                    : 'Mistral · ένα prompt · ';
+                if (progressDetail) {
+                    progressDetail.textContent = pre + 'κλήση ' + callIndex + '/' + totalCalls +
+                        ' · βήμα ' + (stepIndex + 1) + '/' + stepTotal;
+                }
+                primaryBtn.textContent = progressPrefix + ' · βήμα ' + (stepIndex + 1) + '/' + stepTotal +
+                    ' (κλήση ' + callIndex + '/' + totalCalls + ')';
+            }
+            function setSegmentProgress(callIndex, totalCalls, segmentStep, segmentsTotal, phase) {
+                if (!progressFill || !totalCalls) return;
+                const st = Math.max(segmentsTotal || 1, 1);
+                const ss = Math.min(segmentStep || 0, st);
+                const frac = (callIndex - 1 + ss / st) / totalCalls;
+                progressFill.style.width = (100 * Math.min(Math.max(frac, 0), 1)) + '%';
+                let ph = '';
+                if (phase === 'critical_review') ph = ' · πλήρης επανεξέταση';
+                else if (phase === 'critical_triage') ph = ' · CRITICAL triage';
+                else if (phase === 'single_shot_llm') ph = ' · one-shot LLM';
+                else if (phase === 'segment_llm') ph = ' · ανά τμήμα';
+                if (progressDetail) {
+                    progressDetail.textContent = 'Κλήση ' + callIndex + '/' + totalCalls +
+                        ' · LLM ' + ss + '/' + st + ph;
+                }
+                primaryBtn.textContent = 'Classifier · κλήση ' + callIndex + '/' + totalCalls + ' · LLM ' + ss + '/' + st + '…';
+            }
+
+            currentExplainStreamKind = opts.initialStreamKind || 'full_llm';
+            let streamDone = false;
+            let errMsg = null;
+            let lastMetrics = null;
+            let lastTotal = 0;
+            try {
+                const r = await fetch('/run_baseline_explainability_stream', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+                if (!r.ok) {
+                    hideProgress();
+                    alert(alertHttp + ' ' + r.status + ' — τρέχει ο server του dashboard;');
+                    return;
+                }
+                if (!r.body || typeof r.body.getReader !== 'function') {
+                    hideProgress();
+                    alert('Ο browser δεν εξέθεσε ροή ανάγνωσης. Δοκιμάστε Chrome ή Firefox.');
+                    return;
+                }
+                const reader = r.body.getReader();
+                const decoder = new TextDecoder();
+                let buf = '';
+                outer: while (!streamDone) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    buf += decoder.decode(value, { stream: true });
+                    const lines = buf.split('\n');
+                    buf = lines.pop() || '';
+                    for (const line of lines) {
+                        if (!line.startsWith('data: ')) continue;
+                        let data;
+                        try {
+                            data = JSON.parse(line.slice(6));
+                        } catch (_) {
+                            continue;
+                        }
+                        if (data.error) {
+                            errMsg = data.error;
+                            streamDone = true;
+                            break outer;
+                        }
+                        if (data.message && data.finished && data.total === 0 && !data.metrics) {
+                            errMsg = data.message;
+                        }
+                        if (data.started && data.total != null) {
+                            lastTotal = data.total;
+                            if (data.explainability_custom_subprompts) currentExplainStreamKind = 'subs';
+                            else if (data.explainability_custom_full_llm_only) currentExplainStreamKind = 'full_llm';
+                            else if (data.explainability_custom) currentExplainStreamKind = 'full';
+                            showProgress(0, data.total);
+                            primaryBtn.textContent = progressPrefix + ' 0 / ' + data.total + ' κλήσεις…';
+                            if (progressDetail && data.steps_per_call) {
+                                let pre = '';
+                                if (data.explainability_mistral_explain_only) pre = 'Έως ' + data.steps_per_call + ' βήμα Mistral ανά κλήση · ';
+                                else pre = 'Έως ' + data.steps_per_call + ' βήματα explainability · ';
+                                const tail = data.explainability_mistral_explain_only ? 'απαντήσεις LLM' : 'μετά classifier';
+                                progressDetail.textContent = pre + tail;
+                            }
+                        }
+                        if (data.call_started && data.mode === 'explainability' && data.call_uuid) {
+                            const uid = data.call_uuid;
+                            if (!calls[uid]) {
+                                calls[uid] = {
+                                    uuid: uid,
+                                    transcripts: [],
+                                    classification: null,
+                                    last_classification_time: 0,
+                                    is_processing: false
+                                };
+                            }
+                            let modeInit = 'custom';
+                            if (data.explain_variant === 'custom_subprompts') modeInit = 'custom_subprompts';
+                            else if (data.explain_variant === 'custom_full') modeInit = 'custom';
+                            calls[uid].explainability = { steps: [], mode: modeInit };
+                            explainabilityStreamingCallUuid = uid;
+                            if (activeUid === uid) {
+                                const ca = document.getElementById('classificationArea');
+                                if (ca) ca.style.display = 'block';
+                                renderExplainability(calls[uid], { streaming: true, scrollToLatest: false });
+                            }
+                        }
+                        if (data.explain_step && data.call_uuid && data.call_index != null && data.total_calls != null) {
+                            setExplainStepProgress(
+                                data.call_index,
+                                data.total_calls,
+                                data.step_index,
+                                data.step_total
+                            );
+                            appendExplainabilityStep(data.call_uuid, {
+                                step_index: data.step_index,
+                                step_key: data.step_key,
+                                step_title: data.step_title,
+                                llm_question: data.llm_question,
+                                llm_raw: data.llm_raw
+                            });
+                            explainabilityStreamingCallUuid = data.call_uuid;
+                            if (activeUid === data.call_uuid) {
+                                const ca = document.getElementById('classificationArea');
+                                if (ca) ca.style.display = 'block';
+                                renderExplainability(calls[data.call_uuid], { streaming: true, scrollToLatest: true });
+                            }
+                        }
+                        if (data.segment_tick && data.call_index != null && data.total_calls != null) {
+                            setSegmentProgress(
+                                data.call_index,
+                                data.total_calls,
+                                data.segment_step,
+                                data.segments_total,
+                                data.phase
+                            );
+                        }
+                        if (data.done != null && data.total != null) {
+                            showProgress(data.done, data.total);
+                            lastTotal = data.total;
+                            primaryBtn.textContent = 'Ολοκληρώθηκαν ' + data.done + ' / ' + data.total + ' κλήσεις';
+                        }
+                        if (data.metrics) lastMetrics = data.metrics;
+                        if (data.finished) {
+                            streamDone = true;
+                            break outer;
+                        }
+                    }
+                }
+                hideProgress();
+                if (metricsEl && lastMetrics) {
+                    metricsEl.innerHTML = formatMetricsHtml(lastMetrics);
+                    metricsEl.style.display = 'block';
+                }
+                if (errMsg) {
+                    alert(errMsg);
+                } else if (lastTotal === 0 && !lastMetrics && !errMsg) {
+                    alert('Δεν υπάρχουν κλήσεις με κείμενο προς ταξινόμηση. Εισάγετε κλήσεις πρώτα.');
+                } else if (!errMsg && lastTotal > 0 && opts.saveExportVariantOnSuccess) {
+                    pendingSaveExportVariant = opts.saveExportVariantOnSuccess;
+                }
+                primaryBtn.textContent = 'Τέλος: ' + greekCallsCount(lastTotal || 0);
+                setTimeout(function() {
+                    primaryBtn.textContent = idleLabelFn(Object.keys(calls).length);
+                }, 3500);
+                explainabilityStreamingCallUuid = null;
+                if (activeUid && calls[activeUid]) {
+                    const ac = calls[activeUid];
+                    if (ac.classification) renderClassification(ac.classification, ac);
+                    else if (ac.explainability && ac.explainability.steps && ac.explainability.steps.length) {
+                        renderExplainabilityOnly(ac);
+                    }
+                }
+            } catch (e) {
+                hideProgress();
+                explainabilityStreamingCallUuid = null;
+                alert(alertFail + ': ' + (e.message || 'σφάλμα δικτύου'));
+                primaryBtn.textContent = idleLabelFn(Object.keys(calls).length);
+                if (activeUid && calls[activeUid]) {
+                    const ac = calls[activeUid];
+                    if (ac.classification) renderClassification(ac.classification, ac);
+                    else if (ac.explainability && ac.explainability.steps && ac.explainability.steps.length) {
+                        renderExplainabilityOnly(ac);
+                    }
+                }
+            } finally {
+                explainabilityStreamingCallUuid = null;
+                primaryBtn.dataset[runningDatasetKey] = '0';
+                primaryBtn.disabled = false;
+                if (baselineBtnPeer) baselineBtnPeer.disabled = false;
+                if (customBtnPeer) customBtnPeer.disabled = false;
+                if (goldEvalBtnPeer) goldEvalBtnPeer.disabled = false;
+            }
+        }
+
+        document.addEventListener('keydown', function(ev) {
+            if (ev.key !== 'Escape') return;
+            document.querySelectorAll('.modal-overlay.is-open').forEach(function(el) {
+                closeModalOverlay(el);
+            });
+        });
+
+        function setVllmHeaderStatus(h) {
+            const el = document.getElementById('vllmHeaderStatus');
+            if (!el) return;
+            const url = (h && h.vllm_base_url) ? String(h.vllm_base_url) : '';
+            if (h && h.vllm_healthy) {
+                el.className = 'badge badge-vllm-up';
+                el.textContent = 'vLLM: OK';
+                el.title = 'Inference engine reachable' + (url ? ' · ' + url : '');
+            } else {
+                el.className = 'badge badge-vllm-down';
+                el.textContent = 'vLLM: Not Working';
+                el.title = h
+                    ? ('vLLM not reachable — e.g. bash run_vllm.sh · ' + (url || 'set VLLM_BASE_URL'))
+                    : 'Dashboard /health failed — is the classifier server running?';
+            }
+        }
+
+        async function refreshAgentModel() {
+            try {
+                const r = await fetch('/health');
+                const h = await r.json();
+                const eng = h.inference_engine || 'vLLM';
+                const src = h.model_source || 'Hugging Face Hub';
+                const mdl = h.model || 'mistralai/Mistral-7B-Instruct-v0.2';
+                const vllmUrl = h.vllm_base_url || '';
+                const vllmLine = vllmUrl
+                    ? (h.vllm_healthy ? `vLLM OK · ${vllmUrl}` : `vLLM DOWN — start: bash run_vllm.sh · ${vllmUrl}`)
+                    : '';
+                const line = (h.agent_summary || (eng + ' · ' + mdl + ' · ' + src)) + (vllmLine ? '\n' + vllmLine : '');
+                const t = document.getElementById('sidebarAgentModelText');
+                if (t) t.textContent = line;
+                const card = document.getElementById('cardAgentModel');
+                if (card) card.textContent = line;
+                setVllmHeaderStatus(h);
+            } catch (e) {
+                const t = document.getElementById('sidebarAgentModelText');
+                if (t) t.textContent = 'Αποτυχία ελέγχου κατάστασης';
+                setVllmHeaderStatus(null);
+            }
+        }
+
+        function connect() {
+            socket = new WebSocket(wsUrl);
+            socket.onmessage = (e) => {
+                const data = JSON.parse(e.data);
+                if (data.server_time) lastServerTime = data.server_time;
+
+                if (data.type === 'call_update') handleCallUpdate(data.calls);
+                if (data.type === 'transcript') handleTranscript(data);
+                if (data.type === 'classification_update') handleClassUpdate(data);
+            };
+            socket.onclose = () => {
+                setTimeout(connect, 2000);
+            };
+        }
+
+        function mergeCallIntoStore(c) {
+            if (calls[c.uuid]) {
+                const existing = calls[c.uuid];
+                if (existing.is_processing && !c.is_processing) c.is_processing = true;
+                if (!c.last_classification_time || c.last_classification_time < existing.last_classification_time) {
+                    c.last_classification_time = existing.last_classification_time;
+                    if (!c.classification) c.classification = existing.classification;
+                }
+                if (!c.transcripts || c.transcripts.length === 0) c.transcripts = existing.transcripts;
+                if (c.ground_truth_is_vishing === undefined && existing.ground_truth_is_vishing !== undefined) {
+                    c.ground_truth_is_vishing = existing.ground_truth_is_vishing;
+                }
+                if (c.ground_truth_label === undefined && existing.ground_truth_label !== undefined) {
+                    c.ground_truth_label = existing.ground_truth_label;
+                }
+                if (!c.triggered_actions || c.triggered_actions.length === 0) {
+                    c.triggered_actions = existing.triggered_actions || [];
+                }
+                if (c.explainability && existing.explainability) {
+                    const inc = c.explainability;
+                    const old = existing.explainability;
+                    const nI = (inc.steps && inc.steps.length) || 0;
+                    const nO = (old.steps && old.steps.length) || 0;
+                    const tI = Number(inc.updated_at) || 0;
+                    const tO = Number(old.updated_at) || 0;
+                    if (nO > nI && tI <= tO) {
+                        c.explainability = old;
+                    }
+                } else if (!c.explainability && existing.explainability) {
+                    c.explainability = existing.explainability;
+                }
+            }
+            calls[c.uuid] = c;
+        }
+
+        function applyCallFilter(callList) {
+            if (callFilter === 'vishing') {
+                return callList.filter(c =>
+                    c.classification &&
+                    (c.classification.label === 'YES' || c.classification.category === 'vishing' || c.classification.risk_status === 'VISHING')
+                );
+            }
+            if (callFilter === 'critical') {
+                return callList.filter(c =>
+                    c.classification &&
+                    (c.classification.category === 'critical' || c.classification.risk_status === 'CRITICAL')
+                );
+            }
+            if (callFilter === 'safe') {
+                return callList.filter(c =>
+                    c.classification && c.classification.risk_status === 'SAFE'
+                );
+            }
+            if (callFilter === 'pending') {
+                return callList.filter(c => !c.classification || c.is_processing);
+            }
+            if (callFilter === 'error') {
+                return callList.filter(c =>
+                    c.classification && c.classification.risk_status === 'ERROR' && !c.is_processing
+                );
+            }
+            return callList;
+        }
+
+        function updateCallBreakdown(allList) {
+            const el = document.getElementById('callBreakdown');
+            if (!el) return;
+            let v = 0, crit = 0, safe = 0, err = 0, pend = 0, other = 0;
+            const n = allList.length;
+            for (const c of allList) {
+                if (!c.classification || c.is_processing) {
+                    pend++;
+                    continue;
+                }
+                const rs = c.classification.risk_status;
+                if (rs === 'ERROR') err++;
+                else if (rs === 'VISHING') v++;
+                // CRITICAL defaults to fraud-bin merge when pred_positive_fraud_metrics is not false
+                else if (rs === 'CRITICAL') {
+                    if (c.classification.pred_positive_fraud_metrics !== false) v++;
+                    else crit++;
+                }
+                else if (rs === 'SAFE') safe++;
+                else other++;
+            }
+            el.innerHTML = 'Σύνολο <span class="bd-num">' + n + '</span> · Κάδος vishing <span class="bd-num">' + v +
+                '</span> · Μόνο CRITICAL <span class="bd-num">' + crit + '</span> · SAFE <span class="bd-num">' + safe +
+                '</span> · ΣΦΑΛΜΑ <span class="bd-num">' + err + '</span> · Εκκρεμεί <span class="bd-num">' + pend + '</span>' +
+                (other ? ' · Άλλο <span class="bd-num">' + other + '</span>' : '');
+        }
+
+        function handleCallUpdate(callList) {
+            const listEl = document.getElementById('callList');
+            const countEl = document.getElementById('callsCount');
+            const runBtn = document.getElementById('runBaselineBtn');
+            if (!listEl) return;
+
+            if (callList && callList.length > 0) {
+                for (const c of callList) {
+                    mergeCallIntoStore(c);
+                }
+            }
+            const allList = Object.values(calls);
+            updateCallBreakdown(allList);
+            const filtered = applyCallFilter(allList);
+            listEl.innerHTML = '';
+            if (countEl) countEl.textContent = '(' + filtered.length + (callFilter !== 'all' ? ' / ' + allList.length : '') + ')';
+
+            if (runBtn && runBtn.dataset.baselineRunning !== '1') {
+                runBtn.textContent = baselineIdleLabel(allList.length);
+            }
+            const customExBtn = document.getElementById('runBaselineCustomExplainBtn');
+            if (customExBtn && customExBtn.dataset.customExplainRunning !== '1') {
+                customExBtn.textContent = customExplainIdleLabel(allList.length);
+            }
+            const goldExBtn = document.getElementById('runGoldEvalExplainBtn');
+            if (goldExBtn && goldExBtn.dataset.goldEvalRunning !== '1') {
+                goldExBtn.textContent = goldEvalIdleLabel(allList.length);
+            }
+
+            if (filtered.length === 0) {
+                const empty = document.createElement('div');
+                empty.id = 'callListEmpty';
+                empty.className = 'call-list-empty';
+                empty.innerHTML = allList.length === 0
+                    ? '<p>Δεν υπάρχουν κλήσεις ακόμη.</p><p class="call-list-empty-hint">Στείλτε τμήματα στο <code>/push_segment</code> ή χρησιμοποιήστε «Εισαγωγή κλήσεων».</p>'
+                    : '<p>Καμία κλήση δεν ταιριάζει στο φίλτρο.</p><p class="call-list-empty-hint">Δοκιμάστε <strong>Όλες</strong>, <strong>Εκκρεμεί</strong> ή <strong>Σφάλμα</strong> — οι υπόλοιπες μπορεί να είναι στην ουρά ή κρυμμένες (ανανέωση μετά από επανεκκίνηση server).</p>';
+                listEl.appendChild(empty);
+                const placeholder = document.getElementById('noCallPlaceholder');
+                if (placeholder) placeholder.classList.remove('hidden');
+            } else {
+                filtered.forEach(c => {
+                    const div = document.createElement('div');
+                    div.className = `call-item ${activeUid === c.uuid ? 'active' : ''}`;
+                    div.onclick = () => selectCall(c.uuid);
+
+                    const dom = c.classification ? (c.classification.domain || '-') : '-';
+                    const riskStatus = c.classification ? c.classification.risk_status : 'SAFE';
+                    const scorePct = (c.classification && c.classification.score != null && !isNaN(c.classification.score))
+                        ? (c.classification.score * 100).toFixed(0) + '%' : (c.classification && c.classification.risk_status === 'ERROR' ? 'Σφ' : '-');
+                    let statusColor = 'var(--success)';
+                    if (riskStatus === 'ERROR') statusColor = '#b91c1c';
+                    else if (riskStatus === 'CRITICAL') statusColor = 'var(--danger)';
+                    else if (riskStatus === 'VISHING') statusColor = '#fb923c';
+                    else if (riskStatus === 'WARNING') statusColor = 'var(--warning)';
+
+                    const segCount = (c.transcripts && c.transcripts.length) || 0;
+                    let gtBadge = '';
+                    const importTag = (c.ground_truth_label === 'vishing' || c.ground_truth_label === 'non_vishing')
+                        ? `<span class="badge" style="font-size:0.55rem;background:#334155;margin-right:6px" title="Ετικέτα από εισαγωγή dataset">Εισ: ${c.ground_truth_label}</span>`
+                        : '';
+                    if (c.ground_truth_is_vishing !== undefined && c.ground_truth_is_vishing !== null && c.classification && c.classification.score != null && !isNaN(c.classification.score)) {
+                        const gtV = !!c.ground_truth_is_vishing;
+                        let predPos;
+                        if (typeof c.classification.pred_positive_fraud_metrics === 'boolean') {
+                            predPos = c.classification.pred_positive_fraud_metrics;
+                        } else {
+                            const rs = c.classification.risk_status;
+                            predPos = rs === 'VISHING' || rs === 'CRITICAL' || c.classification.label === 'YES';
+                        }
+                        const ok = gtV === predPos;
+                        const gtTitle = ok
+                            ? 'Matches import: vishing calls should raise fraud signal (score≥threshold or CRITICAL); non-vishing should not.'
+                            : (gtV
+                                ? 'False negative: import says VISHING but fraud signal is off (missed scam).'
+                                : 'False positive: import says non-vishing but fraud signal is on.');
+                        gtBadge = `<span class="badge" style="font-size:0.6rem;background:${ok ? '#15803d' : '#b91c1c'}" title="${gtTitle}">${ok ? '✓' : '✗'}</span><span class="label" style="font-size:0.55rem;margin-left:4px;" title="${gtTitle}">GT</span>`;
+                    }
+                    div.innerHTML = `
+                        <div class="call-meta">${c.uuid.substring(0, 8)}... · ${segCount} ${segCount === 1 ? 'τμήμα' : 'τμήματα'}</div>
+                        <div style="margin-top:0.35rem">${importTag}</div>
+                        <div style="margin-top:0.35rem">
+                            <span class="label" style="font-size: 0.6rem; margin-right: 4px;">ΚΑΤΑΣΤΑΣΗ:</span>
+                            <span class="badge" style="background:${statusColor}">${riskStatus}</span>
+                            ${gtBadge}
+                            <span class="label" style="font-size: 0.6rem; margin-left: 8px;">Βαθμός: ${scorePct}</span>
+                            <span class="label" style="font-size: 0.6rem; margin-left: 8px; margin-right: 4px;">Τομέας:</span>
+                            <span class="badge badge-sent" style="font-size: 0.6rem">${dom}</span>
+                        </div>
+                    `;
+                    listEl.appendChild(div);
+                });
+                if (!activeUid && filtered.length > 0) selectCall(filtered[0].uuid);
+            }
+
+            // If the selected call was in this update, refresh main panel STATE/score
+            if (activeUid && calls[activeUid] && calls[activeUid].classification) {
+                renderClassification(calls[activeUid].classification, calls[activeUid]);
+                updateStatus(calls[activeUid]);
+            } else if (activeUid && calls[activeUid] && calls[activeUid].explainability &&
+                calls[activeUid].explainability.steps && calls[activeUid].explainability.steps.length) {
+                renderExplainabilityOnly(calls[activeUid]);
+            }
+
+            const placeholder = document.getElementById('noCallPlaceholder');
+            if (placeholder) placeholder.classList.toggle('hidden', filtered.length > 0 && activeUid);
+        }
+
+        function setCallFilter(filter) {
+            callFilter = filter;
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.getAttribute('data-filter') === filter);
+            });
+            handleCallUpdate(Object.values(calls));
+        }
+
+        function handleTranscript(data) {
+            if (!calls[data.call_uuid]) {
+                calls[data.call_uuid] = { uuid: data.call_uuid, transcripts: [], classification: null, last_classification_time: 0, is_processing: false };
+            }
+            calls[data.call_uuid].transcripts.push(data.segment);
+            if (activeUid === data.call_uuid) appendMsg(data.segment);
+            // Refresh sidebar so segment count and list stay in sync
+            handleCallUpdate(Object.values(calls));
+        }
+
+        function handleClassUpdate(data) {
+            console.log("Processing classification_update:", data);
+            const buffer = calls[data.call_uuid];
+            if (!buffer) {
+                console.warn("Received update for unknown call:", data.call_uuid);
+                return;
+            }
+
+            // Robust state merging
+            if (data.classification) buffer.classification = data.classification;
+            if (data.hasOwnProperty('last_classification_time')) buffer.last_classification_time = data.last_classification_time;
+            if (data.hasOwnProperty('is_processing')) buffer.is_processing = data.is_processing;
+            if (data.triggered_actions) buffer.triggered_actions = data.triggered_actions;
+
+            if (activeUid === data.call_uuid) {
+                if (buffer.classification) renderClassification(buffer.classification, buffer);
+                updateStatus(buffer);
+            }
+
+            handleCallUpdate(Object.values(calls));
+        }
+
+        function updateStatus(buffer) {
+            // AI Status / Category removed; keep for compatibility
+        }
+
+        // Ticker for time ago updates
+        setInterval(() => {
+            lastServerTime += 1;
+            if (activeUid && calls[activeUid]) {
+                updateStatus(calls[activeUid]);
+            }
+        }, 1000);
+
+        function selectCall(uid) {
+            activeUid = uid;
+            const c = calls[uid];
+            const placeholder = document.getElementById('noCallPlaceholder');
+            if (placeholder) placeholder.classList.add('hidden');
+
+            document.querySelectorAll('.call-item').forEach(el => el.classList.remove('active'));
+
+            const chat = document.getElementById('chatContainer');
+            chat.innerHTML = '';
+            if (c && c.transcripts) c.transcripts.forEach(appendMsg);
+
+            const area = document.getElementById('classificationArea');
+            if (c && c.classification) {
+                renderClassification(c.classification, c);
+            } else if (c && c.explainability && c.explainability.steps && c.explainability.steps.length) {
+                if (area) area.style.display = 'block';
+                renderExplainabilityOnly(c);
+            } else {
+                if (area) area.style.display = 'none';
+            }
+
+            updateStatus(c);
+        }
+
+        function renderExplainability(buf, opts) {
+            opts = opts || {};
+            const wrap = document.getElementById('explainabilityStoredWrap');
+            const body = document.getElementById('explainabilityStoredBody');
+            const titleEl = document.getElementById('explainabilityCallTitle');
+            if (!wrap || !body) return;
+            const ex = buf && buf.explainability;
+            if (!ex || !ex.steps || !ex.steps.length) {
+                wrap.style.display = 'none';
+                body.innerHTML = '';
+                if (titleEl) titleEl.textContent = '';
+                return;
+            }
+            const uid = (buf && buf.uuid) ? buf.uuid : '';
+            const shortId = uid ? (uid.substring(0, 8) + '…') : '';
+            const streaming = !!(opts.streaming || isExplainabilityStreamingFor(buf));
+            resetClassificationCardIfNoClassification(buf);
+            if (titleEl) {
+                titleEl.textContent = '';
+                const modeCustom = ex.mode === 'custom';
+                const modeSubs = ex.mode === 'custom_subprompts';
+                let titleBase = 'Explainability — κλήση ' + shortId + ' · Prompt #4 (6 υποερωτήσεις) · κύλιση για πλήρες κείμενο';
+                if (modeCustom) {
+                    titleBase = 'Explainability — κλήση ' + shortId + ' · προσαρμοσμένο prompt (1 βήμα LLM) · κύλιση για πλήρες κείμενο';
+                } else if (modeSubs) {
+                    var nst = (ex.steps && ex.steps.length) ? ex.steps.length : 0;
+                    titleBase = 'Explainability — κλήση ' + shortId + ' · ' + nst + ' βήματα Mistral (υπο-prompts) · κύλιση για πλήρες κείμενο';
+                }
+                titleEl.appendChild(document.createTextNode(titleBase));
+                if (streaming) {
+                    const pill = document.createElement('span');
+                    pill.className = 'explain-stream-pill';
+                    pill.textContent = 'Ζωντανή ροή';
+                    titleEl.appendChild(pill);
+                }
+            }
+            wrap.style.display = 'block';
+            body.innerHTML = '';
+            const sorted = ex.steps.slice().sort(function (a, b) {
+                return (a.step_index || 0) - (b.step_index || 0);
+            });
+            for (let i = 0; i < sorted.length; i++) {
+                const s = sorted[i];
+                const block = document.createElement('div');
+                block.className = 'explain-step-stored';
+                const h = document.createElement('div');
+                h.className = 'explain-step-h';
+                h.textContent = String(s.step_title || s.step_key || '');
+                const meta = document.createElement('div');
+                meta.className = 'explain-step-meta';
+                const stepNum = (typeof s.step_index === 'number' ? s.step_index : i) + 1;
+                const nTot = Math.max(sorted.length, stepNum);
+                meta.textContent = 'Βήμα ' + stepNum + '/' + nTot;
+                const qtext = String(s.llm_question || '').trim();
+                if (qtext) {
+                    const qLbl = document.createElement('div');
+                    qLbl.className = 'explain-llm-question-label';
+                    qLbl.textContent = 'LLM Question:';
+                    const qPre = document.createElement('pre');
+                    qPre.className = 'explain-step-pre';
+                    qPre.textContent = qtext;
+                    block.appendChild(h);
+                    block.appendChild(meta);
+                    block.appendChild(qLbl);
+                    block.appendChild(qPre);
+                } else {
+                    block.appendChild(h);
+                    block.appendChild(meta);
+                }
+                const respLbl = document.createElement('div');
+                respLbl.className = 'explain-llm-response-label';
+                respLbl.textContent = 'LLM Response:';
+                const pre = document.createElement('pre');
+                pre.className = 'explain-step-pre';
+                pre.textContent = String(s.llm_raw || '');
+                block.appendChild(respLbl);
+                block.appendChild(pre);
+                body.appendChild(block);
+            }
+            if (opts.scrollToLatest) {
+                requestAnimationFrame(function () {
+                    body.scrollTop = body.scrollHeight;
+                });
+            }
+        }
+
+        function renderExplainabilityOnly(buf) {
+            const area = document.getElementById('classificationArea');
+            if (area) area.style.display = 'block';
+            renderExplainability(buf, { streaming: isExplainabilityStreamingFor(buf) });
+        }
+
+        function renderClassification(cl, buf) {
+            document.getElementById('classificationArea').style.display = 'block';
+            const sentEl = document.getElementById('resSentiment');
+            sentEl.textContent = cl.sentiment || '-';
+            sentEl.className = `value sentiment-${cl.sentiment || 'Neutral'}`;
+            document.getElementById('resDomain').textContent = cl.domain || '-';
+
+            // LLM-only vishing score and status (no heuristics, no accumulator)
+            const vishingScore = cl.score ?? cl.vishing_score;
+            const scoreEl = document.getElementById('resVishing');
+            scoreEl.textContent = (vishingScore != null && !isNaN(vishingScore)) ? (vishingScore * 100).toFixed(0) + '%' : (cl.risk_status === 'ERROR' ? 'Σφάλμα' : '-');
+            // Keep Score color consistent with the Status badge.
+            let scoreColor = 'var(--success)';
+            if (cl.risk_status === 'CRITICAL') scoreColor = 'var(--danger)';
+            else if (cl.risk_status === 'VISHING') scoreColor = '#fb923c';
+            else if (cl.risk_status === 'WARNING') scoreColor = 'var(--warning)';
+            else if (cl.risk_status === 'ERROR') scoreColor = '#f87171';
+            scoreEl.style.color = scoreColor;
+
+            const riskStatusEl = document.getElementById('resRiskStatus');
+            riskStatusEl.textContent = cl.risk_status || 'SAFE';
+            let riskColor = 'var(--success)';
+            if (cl.risk_status === 'CRITICAL') riskColor = 'var(--danger)';
+            else if (cl.risk_status === 'VISHING') riskColor = '#fb923c';
+            else if (cl.risk_status === 'WARNING') riskColor = 'var(--warning)';
+            else if (cl.risk_status === 'ERROR') riskColor = '#f87171';
+            riskStatusEl.style.color = riskColor;
+
+            const actionEl = document.getElementById('resTriggeredAction');
+            const actions = (buf && buf.triggered_actions) || (cl.triggered_actions) || [];
+            if (actions.length > 0) {
+                const last = actions[actions.length - 1];
+                const ts = last.timestamp ? new Date(last.timestamp * 1000).toLocaleTimeString() : '';
+                actionEl.textContent = `🔔 ${last.detail}${ts ? ' · ' + ts : ''}`;
+                actionEl.style.display = 'inline';
+            } else {
+                actionEl.style.display = 'none';
+            }
+
+            const impEl = document.getElementById('resImportGt');
+            const clsEl = document.getElementById('resClassifierLabel');
+            const lr = document.getElementById('resLabelRow');
+            if (buf && buf.ground_truth_label) {
+                if (lr) lr.style.display = 'block';
+                if (impEl) {
+                    impEl.textContent = buf.ground_truth_label === 'vishing'
+                        ? 'vishing (απάτη)'
+                        : (buf.ground_truth_label === 'non_vishing' ? 'μη vishing (νόμιμη)' : buf.ground_truth_label);
+                }
+            } else if (buf && buf.ground_truth_is_vishing !== undefined && buf.ground_truth_is_vishing !== null) {
+                if (lr) lr.style.display = 'block';
+                if (impEl) impEl.textContent = buf.ground_truth_is_vishing ? 'vishing (απάτη)' : 'μη vishing (νόμιμη)';
+            } else {
+                if (impEl) impEl.textContent = '— (χωρίς ετικέτα εισαγωγής)';
+                if (lr) lr.style.display = 'block';
+            }
+            if (clsEl) {
+                if (cl.risk_status === 'ERROR') {
+                    clsEl.textContent = '— (αποτυχία ταξινόμησης)';
+                    clsEl.style.color = '#f87171';
+                } else {
+                    const y = cl.label === 'YES';
+                    clsEl.textContent = y ? 'ΝΑΙ (σήμα απάτης)' : 'ΟΧΙ (χωρίς σήμα απάτης)';
+                    clsEl.style.color = y ? '#fb923c' : 'var(--success)';
+                }
+            }
+
+            const meaningWrap = document.getElementById('resMeaningWrap');
+            const meaningEl = document.getElementById('resMeaning');
+            if (meaningWrap && meaningEl) {
+                if (cl.analysis && cl.risk_status !== 'ERROR') {
+                    meaningEl.textContent = cl.analysis;
+                    meaningWrap.style.display = 'block';
+                } else {
+                    meaningEl.textContent = '-';
+                    meaningWrap.style.display = 'none';
+                }
+            }
+            const errWrap = document.getElementById('resErrorWrap');
+            if (errWrap) {
+                if (cl.risk_status === 'ERROR' && (cl.analysis || cl.error)) {
+                    errWrap.textContent = 'Σφάλμα: ' + (cl.analysis || cl.error);
+                    errWrap.style.display = 'block';
+                } else {
+                    errWrap.textContent = '';
+                    errWrap.style.display = 'none';
+                }
+            }
+            renderExplainability(buf, { streaming: isExplainabilityStreamingFor(buf) });
+        }
+
+        function appendMsg(s) {
+            const chat = document.getElementById('chatContainer');
+            const div = document.createElement('div');
+            div.className = `msg ${s.role}`;
+            div.innerHTML = `
+                ${s.text}
+                <span class="msg-meta">${s.role === 'agent' ? 'ΠΡΑΚΤΟΡΑΣ' : 'ΚΑΛΩΝ'}</span>
+            `;
+            chat.appendChild(div);
+            const mainScroll = document.querySelector('.main-scroll');
+            if (mainScroll) {
+                requestAnimationFrame(function () {
+                    mainScroll.scrollTop = mainScroll.scrollHeight;
+                });
+            } else {
+                chat.scrollTop = chat.scrollHeight;
+            }
+        }
+
+        function fmtPct(x) {
+            if (x == null || x === '' || isNaN(Number(x))) return '—';
+            return (Number(x) * 100).toFixed(1) + '%';
+        }
+        function fmt4(x) {
+            if (x == null || x === '' || isNaN(Number(x))) return '—';
+            return Number(x).toFixed(4);
+        }
+        function formatMetricsHtml(m) {
+            if (!m) return '';
+            const acc = m.accuracy != null ? (m.accuracy * 100).toFixed(1) + '%' : '—';
+            const pr = fmtPct(m.precision);
+            const re = fmtPct(m.recall);
+            const f1 = fmtPct(m.f1_score);
+            const auc = m.roc_auc != null ? fmt4(m.roc_auc) : '—';
+            return (
+                '<strong>Τελευταία εκτέλεση (με ετικέτες)</strong> · ορθότητα <strong>' + acc + '</strong>' +
+                ' · ακρίβεια <strong>' + pr + '</strong> · ανάκληση <strong>' + re + '</strong>' +
+                ' · F1 <strong>' + f1 + '</strong> · ROC-AUC <strong>' + auc + '</strong>' +
+                ' &nbsp;|&nbsp; <strong>TP</strong> ' + (m.TP ?? 0) +
+                ' <strong>TN</strong> ' + (m.TN ?? 0) +
+                ' <strong>FP</strong> ' + (m.FP ?? 0) +
+                ' <strong>FN</strong> ' + (m.FN ?? 0) +
+                ' &nbsp;·&nbsp; αξιολογήθηκαν <strong>' + (m.evaluated ?? 0) + '</strong>' +
+                (m.skipped_no_ground_truth ? ' · χωρίς ετικέτα: ' + m.skipped_no_ground_truth : '') +
+                (m.skipped_errors ? ' · σφάλματα: ' + m.skipped_errors : '')
+            );
+        }
+
+        // Run classifier for all — server counts calls (no dependency on WebSocket client cache)
+        (function() {
+            const btn = document.getElementById('runBaselineBtn');
+            const customExplainPeer = document.getElementById('runBaselineCustomExplainBtn');
+            const goldEvalPeer = document.getElementById('runGoldEvalExplainBtn');
+            const progressWrap = document.getElementById('classifierProgressBar');
+            const progressDone = document.getElementById('progressDone');
+            const progressTotal = document.getElementById('progressTotal');
+            const progressFill = document.getElementById('progressFill');
+            const metricsEl = document.getElementById('lastRunMetrics');
+            const progressDetail = document.getElementById('progressDetail');
+            if (!btn) return;
+
+            function showProgress(done, total) {
+                if (!progressWrap || !progressDone || !progressTotal || !progressFill) return;
+                progressWrap.style.display = 'block';
+                progressDone.textContent = done;
+                progressTotal.textContent = total;
+                progressFill.style.width = total ? (100 * done / total) + '%' : '0%';
+            }
+            function setSegmentProgress(callIndex, totalCalls, segmentStep, segmentsTotal, phase) {
+                if (!progressFill || !totalCalls) return;
+                const st = Math.max(segmentsTotal || 1, 1);
+                const ss = Math.min(segmentStep || 0, st);
+                const frac = (callIndex - 1 + ss / st) / totalCalls;
+                progressFill.style.width = (100 * Math.min(Math.max(frac, 0), 1)) + '%';
+                let ph = '';
+                if (phase === 'critical_review') ph = ' · πλήρης επανεξέταση';
+                else if (phase === 'critical_triage') ph = ' · CRITICAL triage';
+                else if (phase === 'single_shot_llm') ph = ' · one-shot LLM';
+                else if (phase === 'segment_llm') ph = ' · ανά τμήμα';
+                const det = '· κλήση ' + callIndex + '/' + totalCalls + ' · LLM ' + ss + '/' + st + ph;
+                if (progressDetail) progressDetail.textContent = det;
+                btn.textContent = 'Κλήση ' + callIndex + '/' + totalCalls + ' · LLM ' + ss + '/' + st + '…';
+            }
+            function hideProgress() {
+                if (progressWrap) progressWrap.style.display = 'none';
+                if (progressDetail) progressDetail.textContent = '';
+            }
+
+            btn.addEventListener('click', async function() {
+                /* Do not reset pendingSaveExportVariant — keep gold_eval if the last rubric run was Ground Truth. */
+                btn.disabled = true;
+                if (customExplainPeer) customExplainPeer.disabled = true;
+                if (goldEvalPeer) goldEvalPeer.disabled = true;
+                btn.dataset.baselineRunning = '1';
+                btn.textContent = 'Έναρξη classifier…';
+                showProgress(0, 1);
+                if (metricsEl) metricsEl.style.display = 'none';
+                let streamDone = false;
+                let errMsg = null;
+                let lastMetrics = null;
+                let lastTotal = 0;
+                try {
+                    const r = await fetch('/run_baseline_stream?limit=500');
+                    if (!r.ok) {
+                        hideProgress();
+                        alert('Classifier HTTP ' + r.status + ' — τρέχει ο server του dashboard;');
+                        return;
+                    }
+                    if (!r.body || typeof r.body.getReader !== 'function') {
+                        hideProgress();
+                        alert('Ο browser δεν εξέθεσε ροή ανάγνωσης για την απάντηση του classifier. Δοκιμάστε Chrome ή Firefox, ή POST /run_baseline_sample από το API.');
+                        return;
+                    }
+                    btn.textContent = 'Ο classifier εκτελείται… (αναμονή vLLM)';
+                    const reader = r.body.getReader();
+                    const decoder = new TextDecoder();
+                    let buf = '';
+                    outer: while (!streamDone) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+                        buf += decoder.decode(value, { stream: true });
+                        const lines = buf.split('\n');
+                        buf = lines.pop() || '';
+                        for (const line of lines) {
+                            if (!line.startsWith('data: ')) continue;
+                            let data;
+                            try {
+                                data = JSON.parse(line.slice(6));
+                            } catch (_) {
+                                continue;
+                            }
+                            if (data.error) {
+                                errMsg = data.error;
+                                streamDone = true;
+                                break outer;
+                            }
+                            /* Empty run: server sends message + metrics; avoid duplicate alert if metrics shown */
+                            if (data.message && data.finished && data.total === 0 && !data.metrics) {
+                                errMsg = data.message;
+                            }
+                            if (data.started && data.total != null) {
+                                lastTotal = data.total;
+                                showProgress(0, data.total);
+                                btn.textContent = 'Έναρξη 0 / ' + data.total + ' κλήσεων…';
+                                if (progressDetail) progressDetail.textContent = '(προεπιλογή: ένα πέρασμα LLM ανά κλήση· USE_SEGMENT_PROGRESSIVE_BASELINE=true για πιο αργό ανά τμήμα)';
+                            }
+                            if (data.call_started && data.call_index != null && data.total_calls != null) {
+                                btn.textContent = 'Έναρξη κλήσης ' + data.call_index + '/' + data.total_calls + '…';
+                                if (progressDetail) progressDetail.textContent = '· προετοιμασία κλήσης ' + data.call_index + '/' + data.total_calls;
+                            }
+                            if (data.segment_tick && data.call_index != null && data.total_calls != null) {
+                                setSegmentProgress(
+                                    data.call_index,
+                                    data.total_calls,
+                                    data.segment_step,
+                                    data.segments_total,
+                                    data.phase
+                                );
+                            }
+                            if (data.done != null && data.total != null) {
+                                showProgress(data.done, data.total);
+                                lastTotal = data.total;
+                                btn.textContent = 'Ολοκληρώθηκαν ' + data.done + ' / ' + data.total + ' κλήσεις';
+                            }
+                            if (data.metrics) lastMetrics = data.metrics;
+                            if (data.finished) {
+                                streamDone = true;
+                                break outer;
+                            }
+                        }
+                    }
+                    hideProgress();
+                    if (metricsEl && lastMetrics) {
+                        metricsEl.innerHTML = formatMetricsHtml(lastMetrics);
+                        metricsEl.style.display = 'block';
+                    }
+                    if (errMsg) {
+                        alert(errMsg);
+                    } else if (lastTotal === 0 && !lastMetrics && !errMsg) {
+                        alert('Δεν υπάρχουν κλήσεις με κείμενο προς ταξινόμηση. Εισάγετε κλήσεις πρώτα.');
+                    }
+                    btn.textContent = 'Τέλος: ' + greekCallsCount(lastTotal || 0);
+                    setTimeout(function() {
+                        btn.textContent = baselineIdleLabel(Object.keys(calls).length);
+                    }, 3500);
+                } catch (e) {
+                    hideProgress();
+                    alert('Αποτυχία classifier: ' + (e.message || 'σφάλμα δικτύου'));
+                    btn.textContent = baselineIdleLabel(Object.keys(calls).length);
+                } finally {
+                    btn.dataset.baselineRunning = '0';
+                    btn.disabled = false;
+                    if (customExplainPeer) customExplainPeer.disabled = false;
+                    if (goldEvalPeer) goldEvalPeer.disabled = false;
+                }
+            });
+        })();
+
+        // Προσαρμοσμένο prompt: modal → POST → απαντήσεις Mistral ανά κλήση
+        (function() {
+            const btn = document.getElementById('runBaselineCustomExplainBtn');
+            const overlay = document.getElementById('customExplainModal');
+            const cancelBtn = document.getElementById('customExplainModalCancel');
+            const runModalBtn = document.getElementById('customExplainModalRun');
+            const modeFull = document.getElementById('customExplainModeFull');
+            const modeSubs = document.getElementById('customExplainModeSubs');
+            const fullTa = document.getElementById('customExplainFullTextarea');
+            const baselineBtnPeer = document.getElementById('runBaselineBtn');
+            const goldEvalPeer = document.getElementById('runGoldEvalExplainBtn');
+            const progressWrap = document.getElementById('classifierProgressBar');
+            const progressDone = document.getElementById('progressDone');
+            const progressTotal = document.getElementById('progressTotal');
+            const progressFill = document.getElementById('progressFill');
+            const metricsEl = document.getElementById('lastRunMetrics');
+            if (!btn || !overlay || !runModalBtn || !fullTa) return;
+
+            let streamKindCustom = 'full';
+
+            if (modeFull) modeFull.addEventListener('change', syncCustomExplainModalPanels);
+            if (modeSubs) modeSubs.addEventListener('change', syncCustomExplainModalPanels);
+            const subCountEl = document.getElementById('customExplainSubCount');
+            if (subCountEl) subCountEl.addEventListener('change', function() { renderCustomSubFields(true); });
+
+            btn.addEventListener('click', function() {
+                if (btn.dataset.customExplainRunning === '1') return;
+                syncCustomExplainModalPanels();
+                openModalOverlay(overlay);
+                if (modeSubs && modeSubs.checked) {
+                    renderCustomSubFields(true);
+                    const s0 = document.getElementById('customDynSub0');
+                    if (s0) s0.focus();
+                } else {
+                    fullTa.focus();
+                }
+            });
+            if (cancelBtn) cancelBtn.addEventListener('click', function() { closeModalOverlay(overlay); });
+
+            runModalBtn.addEventListener('click', async function() {
+                let payload;
+                if (modeSubs && modeSubs.checked) {
+                    renderCustomSubFields(true);
+                    const countEl = document.getElementById('customExplainSubCount');
+                    var nSubs = Math.min(CUSTOM_EXPLAIN_MAX_SUBS, Math.max(1, parseInt(countEl && countEl.value, 10) || 3));
+                    const arr = [];
+                    for (let i = 0; i < nSubs; i++) {
+                        const el = document.getElementById('customDynSub' + i);
+                        const t = el ? (el.value || '').trim() : '';
+                        if (!t) {
+                            alert('Συμπληρώστε όλα τα υπο-prompts (μη κενά κείμενα).');
+                            return;
+                        }
+                        arr.push(t);
+                    }
+                    payload = { limit: 500, custom_subprompts: arr };
+                    streamKindCustom = 'subs';
+                } else {
+                    const promptText = (fullTa.value || '').trim();
+                    if (!promptText) {
+                        alert('Συμπληρώστε το πλήρες προσαρμοσμένο prompt πριν την έναρξη.');
+                        return;
+                    }
+                    payload = { limit: 500, custom_prompt: promptText };
+                    streamKindCustom = 'full';
+                }
+                closeModalOverlay(overlay);
+                pendingSaveExportVariant = 'default';
+
+                btn.disabled = true;
+                if (baselineBtnPeer) baselineBtnPeer.disabled = true;
+                if (goldEvalPeer) goldEvalPeer.disabled = true;
+                btn.dataset.customExplainRunning = '1';
+                btn.textContent = 'Τρέχει προσαρμοσμένο explainability…';
+                if (progressWrap && progressDone && progressTotal && progressFill) {
+                    progressWrap.style.display = 'block';
+                    progressDone.textContent = '0';
+                    progressTotal.textContent = '1';
+                    progressFill.style.width = '0%';
+                }
+                if (metricsEl) metricsEl.style.display = 'none';
+                explainabilityStreamingCallUuid = null;
+
+                await runExplainabilityPostPayload(payload, btn, {
+                    runningDatasetKey: 'customExplainRunning',
+                    idleLabelFn: customExplainIdleLabel,
+                    progressPrefix: 'Custom',
+                    alertHttp: 'Custom explainability HTTP',
+                    alertFail: 'Αποτυχία custom explainability',
+                    initialStreamKind: streamKindCustom === 'subs' ? 'subs' : 'full_llm'
+                });
+            });
+        })();
+
+        // Ground Truth: fixed sub-prompts (server) — no classifier
+        (function() {
+            const btn = document.getElementById('runGoldEvalExplainBtn');
+            const baselineBtnPeer = document.getElementById('runBaselineBtn');
+            const customBtnPeer = document.getElementById('runBaselineCustomExplainBtn');
+            const progressWrap = document.getElementById('classifierProgressBar');
+            const progressDone = document.getElementById('progressDone');
+            const progressTotal = document.getElementById('progressTotal');
+            const progressFill = document.getElementById('progressFill');
+            const metricsEl = document.getElementById('lastRunMetrics');
+            if (!btn) return;
+
+            btn.addEventListener('click', async function() {
+                if (btn.dataset.goldEvalRunning === '1') return;
+                btn.disabled = true;
+                if (baselineBtnPeer) baselineBtnPeer.disabled = true;
+                if (customBtnPeer) customBtnPeer.disabled = true;
+                btn.dataset.goldEvalRunning = '1';
+                btn.textContent = 'Ground Truth…';
+                if (progressWrap && progressDone && progressTotal && progressFill) {
+                    progressWrap.style.display = 'block';
+                    progressDone.textContent = '0';
+                    progressTotal.textContent = '1';
+                    progressFill.style.width = '0%';
+                }
+                if (metricsEl) metricsEl.style.display = 'none';
+                explainabilityStreamingCallUuid = null;
+
+                const payload = { limit: 500, gold_eval_run: true };
+                await runExplainabilityPostPayload(payload, btn, {
+                    runningDatasetKey: 'goldEvalRunning',
+                    idleLabelFn: goldEvalIdleLabel,
+                    progressPrefix: 'Ground Truth',
+                    alertHttp: 'Ground Truth HTTP',
+                    alertFail: 'Ground Truth failed',
+                    initialStreamKind: 'subs',
+                    saveExportVariantOnSuccess: 'gold_eval'
+                });
+            });
+        })();
+
+        // Εισαγωγή κλήσεων: modal κατηγοριών (ελληνικά) + POST /import_calls
+        (function() {
+            const btn = document.getElementById('importCallsBtn');
+            const overlay = document.getElementById('importModal');
+            const dialog = overlay && overlay.querySelector('.modal-dialog');
+            const cbV = document.getElementById('importCatVishing');
+            const cbN = document.getElementById('importCatNonVishing');
+            const cbNeu = document.getElementById('importCatNeutral');
+            const limitInput = document.getElementById('importLimitInput');
+            const cancelBtn = document.getElementById('importModalCancel');
+            const okBtn = document.getElementById('importModalOk');
+            if (!btn || !overlay || !cbV || !cbN || !cbNeu || !limitInput || !cancelBtn || !okBtn) return;
+
+            function openImportModal() {
+                openModalOverlay(overlay);
+                limitInput.focus();
+            }
+            function closeImportModal() {
+                closeModalOverlay(overlay);
+            }
+            function applyPreset(preset) {
+                if (preset === 'both') {
+                    cbV.checked = true;
+                    cbN.checked = true;
+                    cbNeu.checked = false;
+                } else if (preset === 'all') {
+                    cbV.checked = true;
+                    cbN.checked = true;
+                    cbNeu.checked = true;
+                } else if (preset === 'vishing') {
+                    cbV.checked = true;
+                    cbN.checked = false;
+                    cbNeu.checked = false;
+                } else if (preset === 'non_vishing') {
+                    cbV.checked = false;
+                    cbN.checked = true;
+                    cbNeu.checked = false;
+                } else if (preset === 'neutral') {
+                    cbV.checked = false;
+                    cbN.checked = false;
+                    cbNeu.checked = true;
+                }
+            }
+            overlay.querySelectorAll('[data-import-preset]').forEach(function(el) {
+                el.addEventListener('click', function() {
+                    applyPreset(el.getAttribute('data-import-preset'));
+                });
+            });
+            btn.addEventListener('click', function() { openImportModal(); });
+            cancelBtn.addEventListener('click', function() { closeImportModal(); });
+            overlay.addEventListener('click', function(ev) {
+                if (ev.target === overlay) closeImportModal();
+            });
+            if (dialog) {
+                dialog.addEventListener('click', function(ev) { ev.stopPropagation(); });
+            }
+
+            okBtn.addEventListener('click', async function() {
+                const include_vishing = cbV.checked;
+                const include_non_vishing = cbN.checked;
+                const include_neutral = cbNeu.checked;
+                if (!include_vishing && !include_non_vishing && !include_neutral) {
+                    alert('Επιλέξτε τουλάχιστον μία κατηγορία.');
+                    return;
+                }
+                const n = parseInt(limitInput.value, 10);
+                if (isNaN(n) || n < 1) {
+                    alert('Εισάγετε έναν έγκυρο αριθμό (1–500).');
+                    return;
+                }
+                closeImportModal();
+                btn.disabled = true;
+                try {
+                    const r = await fetch('/import_calls', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            limit: Math.min(500, n),
+                            include_vishing: include_vishing,
+                            include_non_vishing: include_non_vishing,
+                            include_neutral: include_neutral
+                        })
+                    });
+                    let data = {};
+                    try {
+                        data = await r.json();
+                    } catch (_) {
+                        const text = await r.text();
+                        if (!r.ok) {
+                            alert('Σφάλμα: ' + (r.status === 404 ? 'Endpoint δεν βρέθηκε (404). Επανεκκινήστε τον server.' : r.status + ' ' + (text || r.statusText)));
+                            btn.disabled = false;
+                            return;
+                        }
+                    }
+                    if (data.ok) {
+                        let impMsg = 'Εισήχθησαν ' + data.imported + ' συνομιλίες.';
+                        if (data.load_stats) {
+                            const s = data.load_stats;
+                            impMsg += '\nΑπό vishing: ' + (s.from_vishing_file ?? 0) +
+                                ', από μη vishing: ' + (s.from_non_vishing_file ?? 0) +
+                                ', από ουδέτερες: ' + (s.from_neutral_dir ?? 0) +
+                                '\n(διαθέσιμα — vishing: ' + (s.vishing_pool_size ?? 0) +
+                                ', μη vishing: ' + (s.non_vishing_pool_size ?? 0) +
+                                ', ουδέτερες: ' + (s.neutral_pool_size ?? 0) + ').';
+                        }
+                        alert(impMsg);
+                    } else {
+                        const d = data.detail;
+                        const errStr = data.error || (typeof d === 'string' ? d : Array.isArray(d) ? (d[0] && d[0].msg) || String(d[0]) : null) || (!r.ok ? 'HTTP ' + r.status : null) || 'Άγνωστο (προσπαθήστε επανεκκίνηση server).';
+                        alert('Σφάλμα: ' + errStr);
+                    }
+                } catch (e) {
+                    alert('Σφάλμα: ' + (e.message || 'network error'));
+                } finally {
+                    btn.disabled = false;
+                }
+            });
+        })();
+
+        // Διαγραφή κλήσεων: modal επιβεβαίωσης + POST /delete_calls
+        (function() {
+            const btn = document.getElementById('deleteCallsBtn');
+            const overlay = document.getElementById('deleteModal');
+            const dialog = overlay && overlay.querySelector('.modal-dialog');
+            const cancelBtn = document.getElementById('deleteModalCancel');
+            const okBtn = document.getElementById('deleteModalOk');
+            if (!btn || !overlay || !cancelBtn || !okBtn) return;
+
+            function openDeleteModal() { openModalOverlay(overlay); okBtn.focus(); }
+            function closeDeleteModal() { closeModalOverlay(overlay); }
+
+            btn.addEventListener('click', function() { openDeleteModal(); });
+            cancelBtn.addEventListener('click', function() { closeDeleteModal(); });
+            overlay.addEventListener('click', function(ev) {
+                if (ev.target === overlay) closeDeleteModal();
+            });
+            if (dialog) dialog.addEventListener('click', function(ev) { ev.stopPropagation(); });
+
+            okBtn.addEventListener('click', async function() {
+                closeDeleteModal();
+                btn.disabled = true;
+                try {
+                    const r = await fetch('/delete_calls', { method: 'POST' });
+                    const data = await r.json();
+                    if (data.ok) {
+                        calls = {};
+                        activeUid = null;
+                        handleCallUpdate([]);
+                        document.getElementById('noCallPlaceholder')?.classList.remove('hidden');
+                        document.getElementById('classificationArea').style.display = 'none';
+                    }
+                } catch (e) {}
+                btn.disabled = false;
+            });
+        })();
+
+        // Αποθήκευση & λήψη: modal + POST /save_classification_results
+        (function() {
+            const btn = document.getElementById('saveResultsBtn');
+            const overlay = document.getElementById('saveModal');
+            const dialog = overlay && overlay.querySelector('.modal-dialog');
+            const cancelBtn = document.getElementById('saveModalCancel');
+            const okBtn = document.getElementById('saveModalOk');
+            if (!btn || !overlay || !cancelBtn || !okBtn) return;
+
+            function openSaveModal() {
+                const hint = document.getElementById('saveModalExportHint');
+                if (hint) hint.style.display = 'none';
+                openModalOverlay(overlay);
+                okBtn.focus();
+            }
+            function closeSaveModal() { closeModalOverlay(overlay); }
+
+            btn.addEventListener('click', function() { openSaveModal(); });
+            cancelBtn.addEventListener('click', function() { closeSaveModal(); });
+            overlay.addEventListener('click', function(ev) {
+                if (ev.target === overlay) closeSaveModal();
+            });
+            if (dialog) dialog.addEventListener('click', function(ev) { ev.stopPropagation(); });
+
+            okBtn.addEventListener('click', async function() {
+                closeSaveModal();
+                btn.disabled = true;
+                try {
+                    const saveBody = {
+                        export_variant: pendingSaveExportVariant === 'gold_eval' ? 'gold_eval' : 'default'
+                    };
+                    const r = await fetch('/save_classification_results', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(saveBody)
+                    });
+                    let data = {};
+                    try {
+                        data = await r.json();
+                    } catch (_) {
+                        alert('Αποτυχία αποθήκευσης: μη έγκυρο JSON (HTTP ' + r.status + ')');
+                        return;
+                    }
+                    if (data.ok) {
+                        if (data.xlsx_filename) {
+                            try {
+                                const rx = await fetch('/download_export/' + encodeURIComponent(data.xlsx_filename));
+                                if (rx.ok) {
+                                    const blob = await rx.blob();
+                                    const u = URL.createObjectURL(blob);
+                                    const a = document.createElement('a');
+                                    a.href = u;
+                                    a.download = data.xlsx_filename;
+                                    a.rel = 'noopener';
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    a.remove();
+                                    URL.revokeObjectURL(u);
+                                }
+                            } catch (e2) {
+                                console.warn('XLSX download', e2);
+                            }
+                        }
+                        if (data.export_variant === 'gold_eval') {
+                            alert('Saved.');
+                        } else {
+                        const s = data.summary || {};
+                        const m = data.metrics_labeled_only || {};
+                        const acc = m.accuracy != null ? (m.accuracy * 100).toFixed(1) + '%' : '—';
+                        const pr = m.precision != null ? (m.precision * 100).toFixed(1) + '%' : '—';
+                        const re = m.recall != null ? (m.recall * 100).toFixed(1) + '%' : '—';
+                        const f1 = m.f1_score != null ? (m.f1_score * 100).toFixed(1) + '%' : '—';
+                        const auc = m.roc_auc != null ? Number(m.roc_auc).toFixed(4) : '—';
+                        alert(
+                            'Η εξαγωγή αποθηκεύτηκε (JSON + XLSX).\n\n' +
+                            'JSON: ' + (data.filename || '') + '\n' +
+                            (data.xlsx_filename ? 'XLSX: ' + data.xlsx_filename + ' (λήψη εάν επιτρέπει ο browser)\n' : '') +
+                            (data.absolute_path ? 'Διαδρομή JSON: ' + data.absolute_path + '\n\n' : '\n') +
+                            (s.critical_merged_into_vishing_bin
+                                ? 'Κάδος vishing (VISHING+CRITICAL): ' + (s.vishing ?? '—') + ' · Μόνο CRITICAL: ' + (s.critical ?? '—')
+                                : 'VISHING: ' + (s.vishing ?? '—') + ' · CRITICAL: ' + (s.critical ?? '—')) +
+                            ' · SAFE: ' + (s.safe ?? '—') + ' · ERROR: ' + (s.error ?? '—') + ' · PENDING: ' + (s.pending ?? '—') + '\n' +
+                            'Με ετικέτα: ορθότητα ' + acc + ' · P ' + pr + ' · R ' + re + ' · F1 ' + f1 + ' · ROC-AUC ' + auc + '\n' +
+                            'TP ' + (m.TP ?? '—') + ' TN ' + (m.TN ?? '—') + ' FP ' + (m.FP ?? '—') + ' FN ' + (m.FN ?? '—')
+                        );
+                        }
+                    } else {
+                        alert('Αποτυχία αποθήκευσης: ' + (data.error || 'άγνωστο σφάλμα'));
+                    }
+                } catch (e) {
+                    alert('Αποτυχία αποθήκευσης: ' + (e.message || 'σφάλμα δικτύου'));
+                } finally {
+                    btn.disabled = false;
+                }
+            });
+        })();
+
+        // Filters: All / Vishing / Critical / Safe / Pending / Error
+        (function() {
+            document.getElementById('filterAll')?.addEventListener('click', function() { setCallFilter('all'); });
+            document.getElementById('filterVishing')?.addEventListener('click', function() { setCallFilter('vishing'); });
+            document.getElementById('filterCritical')?.addEventListener('click', function() { setCallFilter('critical'); });
+            document.getElementById('filterSafe')?.addEventListener('click', function() { setCallFilter('safe'); });
+            document.getElementById('filterPending')?.addEventListener('click', function() { setCallFilter('pending'); });
+            document.getElementById('filterError')?.addEventListener('click', function() { setCallFilter('error'); });
+        })();
+
+        refreshAgentModel();
+        setInterval(refreshAgentModel, 15000);
+        connect();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,179 @@
+name: vllm_services
+version: '3.8'
+
+services:
+  # ==================== PRODUCTION ====================
+  vllm-prod:
+    image: vllm/vllm-openai:v0.6.3.post1
+    container_name: vllm_prod
+    profiles: ["prod"]
+    runtime: nvidia
+    ports:
+      - "8007:8000"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      - VLLM_USE_V1=0
+    env_file:
+      - config.prod.env
+    command: >
+      --model ${VLLM_MODEL:-mistralai/Mistral-7B-Instruct-v0.2}
+      --port 8000
+      --gpu-memory-utilization ${VLLM_GPU_MEM:-0.4}
+      --max-model-len ${VLLM_MAX_MODEL_LEN:-4096}
+      --dtype auto
+    volumes:
+      - hf_cache:/root/.cache/huggingface
+    networks:
+      - ai_bridge
+    restart: unless-stopped
+
+  classifier-prod:
+    build: .
+    image: vishing-classifier:prod
+    container_name: classifier
+    profiles: ["prod"]
+    ports:
+      - "8005:8001"
+    env_file:
+      - config.prod.env
+    environment:
+      - VLLM_BASE_URL=http://vllm-prod:8000
+      - ENV=prod
+      - CLASSIFIER_PORT=8001
+    depends_on:
+      - vllm-prod
+    networks:
+      - ai_bridge
+    volumes:
+      - ./prompts/prompt_prod.txt:/app/prompt.txt
+      - ./server/templates:/app/vllm_services/server/templates
+      - ${DATA_DIR:-./data}:/data
+      - ./results:/app/vllm_services/results
+    restart: unless-stopped
+
+  # ==================== DEVELOPMENT ====================
+  vllm-dev:
+    image: vllm/vllm-openai:v0.6.3.post1
+    container_name: vllm_dev
+    profiles: ["dev"]
+    runtime: nvidia
+    ports:
+      - "8007:8000"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+    env_file:
+      - config.dev.env
+    command: >
+      --model ${VLLM_MODEL_DEV:-mistralai/Mistral-7B-Instruct-v0.2}
+      --port 8000
+      --gpu-memory-utilization ${VLLM_GPU_MEM_DEV:-0.4}
+      --max-model-len ${VLLM_MAX_MODEL_LEN_DEV:-4096}
+      --dtype auto
+    volumes:
+      - hf_cache:/root/.cache/huggingface
+    networks:
+      - ai_bridge
+    restart: unless-stopped
+
+  classifier-dev:
+    build: .
+    image: vishing-classifier:dev
+    container_name: classifier_dev
+    profiles: ["dev"]
+    ports:
+      - "8005:8001"
+    env_file:
+      - config.dev.env
+    environment:
+      - VLLM_BASE_URL=http://vllm-dev:8000
+      - ENV=dev
+      - CLASSIFIER_PORT=8001
+      - QUALITY_SERVICE_URL=http://quality_service:8011
+    depends_on:
+      - vllm-dev
+    networks:
+      ai_bridge:
+        aliases:
+          - classifier
+    volumes:
+      - ./prompts/prompt_dev.txt:/app/prompt.txt
+      - ./server/templates:/app/vllm_services/server/templates
+      - ${DATA_DIR:-./data}:/data
+      - ./results:/app/vllm_services/results
+    restart: unless-stopped
+
+  # ==================== STAGING ====================
+  vllm-staging:
+    image: vllm/vllm-openai:v0.6.3.post1
+    container_name: vllm_staging
+    profiles: ["staging"]
+    runtime: nvidia
+    ports:
+      - "8007:8000"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+    env_file:
+      - config.staging.env
+    command: >
+      --model ${VLLM_MODEL:-mistralai/Mistral-7B-Instruct-v0.2}
+      --port 8000
+      --gpu-memory-utilization ${VLLM_GPU_MEM:-0.4}
+      --max-model-len ${VLLM_MAX_MODEL_LEN:-4096}
+      --dtype auto
+    volumes:
+      - hf_cache:/root/.cache/huggingface
+    networks:
+      - ai_bridge
+    restart: unless-stopped
+
+  classifier-staging:
+    build: .
+    image: vishing-classifier:staging
+    container_name: classifier_staging
+    profiles: ["staging"]
+    ports:
+      - "8005:8001"
+    env_file:
+      - config.staging.env
+    environment:
+      - VLLM_BASE_URL=http://vllm-staging:8000
+      - ENV=staging
+      - CLASSIFIER_PORT=8001
+    depends_on:
+      - vllm-staging
+    networks:
+      - ai_bridge
+    volumes:
+      - ./prompts/prompt_staging.txt:/app/prompt.txt
+      - ./server/templates:/app/vllm_services/server/templates
+      - ${DATA_DIR:-./data}:/data
+      - ./results:/app/vllm_services/results
+    restart: unless-stopped
+
+networks:
+  ai_bridge:
+    external: true
+
+volumes:
+  hf_cache:

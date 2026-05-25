@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Transcription Monitor</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --sidebar-bg: #1e293b;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-color: #3b82f6;
+            --caller-bubble: #2563eb;
+            --agent-bubble: #16a34a;
+            --border-color: #334155;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        aside {
+            width: 300px;
+            background-color: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 600;
+            font-size: 1.25rem;
+            letter-spacing: -0.025em;
+        }
+
+        .call-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+        }
+
+        .call-item {
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            background-color: #334155;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+
+        .call-item:hover {
+            background-color: #475569;
+        }
+
+        .call-item.active {
+            background-color: #1e3a8a;
+            border-color: var(--accent-color);
+        }
+
+        .call-id {
+            font-weight: 500;
+            font-size: 0.875rem;
+            color: #fff;
+        }
+
+        .call-time {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        /* Main Chat Area */
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--bg-color);
+        }
+
+        .chat-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .current-call-info h2 {
+            font-size: 1.1rem;
+        }
+
+        .status-badge {
+            font-size: 0.65rem;
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        .status-badge.live {
+            background-color: rgba(34, 197, 94, 0.2);
+            color: #4ade80;
+        }
+
+        .status-badge.ended {
+            background-color: rgba(156, 163, 175, 0.2);
+            color: #9ca3af;
+        }
+
+        .chat-container {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        /* Messages */
+        .message {
+            max-width: 70%;
+            display: flex;
+            flex-direction: column;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .message.caller {
+            align-self: flex-start;
+        }
+
+        .message.agent {
+            align-self: flex-end;
+            align-items: flex-end;
+        }
+
+        .bubble {
+            padding: 0.75rem 1rem;
+            border-radius: 1rem;
+            line-height: 1.5;
+            position: relative;
+            font-size: 0.95rem;
+            color: #fff;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        }
+
+        .message.caller .bubble {
+            background-color: var(--caller-bubble);
+            border-top-left-radius: 0.25rem;
+        }
+
+        .message.agent .bubble {
+            background-color: var(--agent-bubble);
+            border-top-right-radius: 0.25rem;
+        }
+
+        .meta {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        /* Empty State */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            opacity: 0.5;
+        }
+
+        .empty-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-color);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+    </style>
+</head>
+
+<body>
+
+    <aside>
+        <div class="sidebar-header">
+            Active Calls: <span id="activeCallsCount" style="color: #10b981; margin-left: 8px;">0</span>
+        </div>
+        <div class="call-list" id="callList">
+            <!-- Call items will be injected here -->
+        </div>
+    </aside>
+
+    <main>
+        <div class="chat-header">
+            <div class="current-call-info">
+                <h2 id="currentCallId">Select a call</h2>
+                <span class="call-time" id="currentCallDuration">--:--</span>
+                <span class="call-time" id="currentCallLatency"
+                    style="color: #d97706; margin-left: 10px; display: none;">Avg Call Latency: --</span>
+            </div>
+            <div class="status-badge" id="connStatus">Connecting...</div>
+            <div id="latencyContainer"
+                style="display: none; flex-direction: column; gap: 4px; align-items: flex-end; margin-left: 10px;">
+                <div class="status-badge" id="systemMeanLatency"
+                    style="background-color: #3b82f6; font-size: 0.6rem; padding: 0.15rem 0.4rem;">MEAN SYS LATENCY: --
+                </div>
+                <div class="status-badge" id="systemMedianLatency"
+                    style="background-color: #3b82f6; font-size: 0.6rem; padding: 0.15rem 0.4rem;">MEDIAN SYS LATENCY:
+                    --</div>
+            </div>
+        </div>
+
+        <div class="chat-container" id="chatContainer">
+            <div class="empty-state">
+                <div class="empty-icon">🎧</div>
+                <p>Waiting for calls...</p>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const wsUrl = `ws://${window.location.host}/ws`;
+        let socket;
+        let activeCalls = {}; // Map: uuid -> CallObject
+        let selectedCallId = null;
+
+        function connect() {
+            socket = new WebSocket(wsUrl);
+
+            socket.onopen = () => {
+                document.getElementById('connStatus').textContent = "Live";
+                document.getElementById('connStatus').style.color = "#4ade80";
+                document.getElementById('connStatus').style.backgroundColor = "rgba(34, 197, 94, 0.2)";
+                console.log("Connected to WebSocket");
+            };
+
+            socket.onmessage = (event) => {
+                const msg = JSON.parse(event.data);
+                handleMessage(msg);
+            };
+
+            socket.onclose = () => {
+                document.getElementById('connStatus').textContent = "Disconnected";
+                document.getElementById('connStatus').style.color = "#ef4444";
+                document.getElementById('connStatus').style.backgroundColor = "rgba(239, 68, 68, 0.2)";
+                setTimeout(connect, 2000);
+            };
+        }
+
+        function handleMessage(msg) {
+            // Types: 'call_update', 'transcript', 'heartbeat'...
+            if (msg.type === 'call_update') {
+                if (msg.active_calls_count !== undefined) updateActiveCallsCount(msg.active_calls_count);
+                updateCallList(msg.calls);
+            } else if (msg.type === 'transcript') {
+                updateLatencyMetrics(msg.system_avg_latency_1min, msg.system_median_latency_1min);
+                handleTranscript(msg);
+            } else if (msg.type === 'system_stats') {
+                updateLatencyMetrics(msg.system_avg_latency_1min, msg.system_median_latency_1min);
+                if (msg.active_calls_count !== undefined) updateActiveCallsCount(msg.active_calls_count);
+            }
+        }
+
+        function updateLatencyMetrics(mean, median) {
+            const container = document.getElementById('latencyContainer');
+            const meanEl = document.getElementById('systemMeanLatency');
+            const medianEl = document.getElementById('systemMedianLatency');
+
+            if (mean !== undefined) {
+                meanEl.innerText = `MEAN SYS LATENCY: ${mean.toFixed(2)}s`;
+                container.style.display = 'flex';
+
+                if (mean > 5.0) meanEl.style.backgroundColor = '#ef4444';
+                else if (mean > 2.0) meanEl.style.backgroundColor = '#f59e0b';
+                else meanEl.style.backgroundColor = '#3b82f6';
+            }
+
+            if (median !== undefined) {
+                medianEl.innerText = `MEDIAN SYS LATENCY: ${median.toFixed(2)}s`;
+                container.style.display = 'flex';
+
+                if (median > 5.0) medianEl.style.backgroundColor = '#ef4444';
+                else if (median > 2.0) medianEl.style.backgroundColor = '#f59e0b';
+                else medianEl.style.backgroundColor = '#3b82f6';
+            }
+        }
+
+        function updateActiveCallsCount(count) {
+            const el = document.getElementById('activeCallsCount');
+            if (el) el.innerText = count;
+        }
+
+        function updateCallList(calls) {
+            console.log("Updating call list:", calls);
+            const listEl = document.getElementById('callList');
+            listEl.innerHTML = '';
+
+            calls.forEach(call => {
+                if (!activeCalls[call.uuid]) {
+                    activeCalls[call.uuid] = {
+                        ...call,
+                        transcripts: call.transcripts || []
+                    };
+                } else {
+                    activeCalls[call.uuid].participants = call.participants;
+                    activeCalls[call.uuid].is_active = call.is_active;
+                    activeCalls[call.uuid].end_time = call.end_time;
+                    if (call.transcripts) {
+                        // Merge: add server transcripts not already present locally
+                        const existing = new Set(
+                            activeCalls[call.uuid].transcripts.map(t => `${t.timestamp_secs}_${t.role}`)
+                        );
+                        for (const t of call.transcripts) {
+                            if (!existing.has(`${t.timestamp_secs}_${t.role}`)) {
+                                activeCalls[call.uuid].transcripts.push(t);
+                            }
+                        }
+                    }
+                }
+
+                // Render
+                const div = document.createElement('div');
+                div.className = `call-item ${selectedCallId === call.uuid ? 'active' : ''} ${!call.is_active ? 'ended' : ''}`;
+                div.onclick = () => selectCall(call.uuid);
+
+                const statusClass = call.is_active ? 'live' : 'ended';
+                const statusText = call.is_active ? 'Live' : 'Ended';
+
+                div.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: start;">
+                        <div class="call-id">${call.uuid.substring(0, 8)}...</div>
+                        <div class="status-badge ${statusClass}">${statusText}</div>
+                    </div>
+                    <div class="call-time">${call.participants} active | Start: ${formatTime(call.start_time)}</div>
+                `;
+                listEl.appendChild(div);
+            });
+
+            // Auto-select if nothing selected and we have calls
+            if (!selectedCallId && calls.length > 0) {
+                console.log("Auto-selecting first call:", calls[0].uuid);
+                selectCall(calls[0].uuid);
+            }
+        }
+
+        function selectCall(uuid) {
+            selectedCallId = uuid;
+            document.getElementById('currentCallId').textContent = `Call: ${uuid}`;
+            document.getElementById('currentCallDuration').textContent = "Recording...";
+
+            // Update UI class
+            const items = document.querySelectorAll('.call-item');
+            items.forEach(el => {
+                // Approximate matching for simplicity (or use IDs)
+                if (el.innerHTML.includes(uuid.substring(0, 8))) el.classList.add('active');
+                else el.classList.remove('active');
+            });
+
+            renderChat(uuid);
+            updateAvgLatency(uuid);
+        }
+
+        function renderChat(uuid) {
+            const container = document.getElementById('chatContainer');
+            container.innerHTML = '';
+
+            if (!activeCalls[uuid]) return;
+
+            const msgs = activeCalls[uuid].transcripts;
+            // Sort by seq or time? Assuming array is sorted.
+            msgs.sort((a, b) => a.timestamp_secs - b.timestamp_secs);
+
+            msgs.forEach(t => appendMessage(t));
+        }
+
+        function appendMessage(t) {
+            // If this message belongs to currently selected call
+            if (selectedCallId !== t.call_uuid) return;
+
+            const container = document.getElementById('chatContainer');
+            const timeStr = formatTime(t.timestamp_secs);
+
+            const div = document.createElement('div');
+            div.className = `message ${t.role}`;
+            div.dataset.timestamp = t.timestamp_secs;
+
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble';
+            bubble.textContent = t.text;
+
+            const meta = document.createElement('div');
+            meta.className = 'meta';
+            meta.innerHTML = `
+                <span>${t.role.toUpperCase()}</span>
+                <span>${timeStr}</span>
+                ${t.latency ? `<span style="color: #d97706; font-weight: bold; margin-left: 4px;">(${t.latency.toFixed(1)}s)</span>` : ''}
+            `;
+
+            div.appendChild(bubble);
+            div.appendChild(meta);
+
+            // Find correct insertion point
+            const children = container.children;
+            let inserted = false;
+            for (let i = 0; i < children.length; i++) {
+                const child = children[i];
+                if (child.dataset.timestamp && parseFloat(child.dataset.timestamp) > t.timestamp_secs) {
+                    container.insertBefore(div, child);
+                    inserted = true;
+                    break;
+                }
+            }
+
+            if (!inserted) {
+                container.appendChild(div);
+            }
+
+            // Scroll to bottom
+            container.scrollTop = container.scrollHeight;
+            updateAvgLatency(selectedCallId);
+        }
+
+        function updateAvgLatency(uuid) {
+            if (!activeCalls[uuid] || !activeCalls[uuid].transcripts) return;
+            const latencies = activeCalls[uuid].transcripts.map(t => t.latency).filter(l => l !== undefined);
+            if (latencies.length > 0) {
+                const avg = latencies.reduce((a, b) => a + b, 0) / latencies.length;
+                const el = document.getElementById('currentCallLatency');
+                el.innerText = `Avg Latency: ${avg.toFixed(2)}s`;
+                el.style.display = 'inline';
+            }
+        }
+
+        function handleTranscript(t) {
+            console.log(`[TRANSCRIPT] Received for ${t.call_uuid} [${t.role}]: ${t.text}`);
+            if (!activeCalls[t.call_uuid]) {
+                activeCalls[t.call_uuid] = { uuid: t.call_uuid, transcripts: [] };
+            }
+
+            // Deduplicate (check if this text/timestamp already exists)
+            const exists = activeCalls[t.call_uuid].transcripts.some(m =>
+                m.text === t.text && Math.abs(m.timestamp_secs - t.timestamp_secs) < 0.1
+            );
+
+            if (!exists) {
+                activeCalls[t.call_uuid].transcripts.push(t);
+                // If active, append to UI
+                if (selectedCallId === t.call_uuid) {
+                    appendMessage(t);
+                }
+            } else {
+                console.log(`[TRANSCRIPT] Deduplicated (already exists): ${t.text}`);
+            }
+        }
+
+        function formatTime(secs) {
+            const m = Math.floor(secs / 60);
+            const s = Math.floor(secs % 60);
+            return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+
+        connect();
+    </script>
+</body>
+
+</html>
